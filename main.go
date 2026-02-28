@@ -24,17 +24,19 @@ type Watchdog struct {
 	rebootTracker *reboot.Tracker
 	restartCounts map[string]int // track restart attempts per service
 	interval      time.Duration
+	dryRun        bool // if true, only log actions without executing
 	logger        *log.Logger
 }
 
 // NewWatchdog creates a new watchdog instance
-func NewWatchdog(cfg *config.Config, interval time.Duration) *Watchdog {
+func NewWatchdog(cfg *config.Config, interval time.Duration, dryRun bool) *Watchdog {
 	w := &Watchdog{
 		cfg:           cfg,
 		plugins:       []plugins.Plugin{},
 		restartCounts: make(map[string]int),
 		interval:      interval,
-		logger:        log.New(os.Stdout, "[worfdog] ", log.LstdFlags),
+		dryRun:        dryRun,
+		logger:        log.New(os.Stdout, fmt.Sprintf("[worfdog %s] ", Version), log.LstdFlags),
 	}
 
 	// Initialize reboot tracker
@@ -143,6 +145,10 @@ func (w *Watchdog) attemptRecovery(serviceName string) {
 
 	// Try to restart the service
 	w.logger.Printf("Attempting to restart service: %s (attempt %d/%d)", serviceName, restartCount, maxRestarts)
+	if w.dryRun {
+		w.logger.Printf("[DRY RUN] Would restart %s", serviceName)
+		return
+	}
 	if err := targetPlugin.Restart(); err != nil {
 		w.logger.Printf("Failed to restart %s: %v", serviceName, err)
 
@@ -181,6 +187,11 @@ func (w *Watchdog) attemptReboot(serviceName string) {
 		return
 	}
 
+	if w.dryRun {
+		w.logger.Printf("[DRY RUN] Would reboot system")
+		return
+	}
+
 	w.logger.Printf("Initiating system reboot...")
 	if err := w.rebootTracker.Reboot(); err != nil {
 		w.logger.Printf("Reboot failed: %v", err)
@@ -199,6 +210,7 @@ func main() {
 	showStatus := flag.Bool("status", false, "Show current status and exit")
 	resetReboots := flag.Bool("reset-reboots", false, "Reset reboot counter")
 	showVersion := flag.Bool("version", false, "Show version and exit")
+	dryRun := flag.Bool("dry_run", false, "Dry run: log actions without executing")
 	flag.Parse()
 
 	// Handle version request
@@ -223,7 +235,7 @@ func main() {
 	}
 
 	// Create watchdog
-	watchdog := NewWatchdog(cfg, *interval)
+	watchdog := NewWatchdog(cfg, *interval, *dryRun)
 
 	// Handle status request
 	if *showStatus {
