@@ -1,0 +1,5 @@
+- simple watchdog service written in Golang
+- 2 initial plugins - https(s) port and systemd
+- ini config
+- shold be able to restart service
+- should be able to reboot server on failures and track those reboots, limit maximum number of reboots

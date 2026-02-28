@@ -1,0 +1,252 @@
+name: Build and Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  packages: write
+
+env:
+  APP_NAME: worfdog
+  GO_VERSION: '1.21'
+
+jobs:
+  build:
+    name: Build Static Binary
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache: true
+
+      - name: Get version
+        id: get_version
+        run: |
+          VERSION=${GITHUB_REF#refs/tags/}
+          echo "version=${VERSION:-dev}" >> $GITHUB_OUTPUT
+
+      - name: Build static binary
+        run: |
+          CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build \
+            -ldflags="-s -w -X main.Version=${{ steps.get_version.outputs.version }}" \
+            -buildvcs=false \
+            -trimpath \
+            -o ${{ env.APP_NAME }} \
+            .
+
+      - name: Verify static binary
+        run: |
+          file ${{ env.APP_NAME }}
+          ldd ${{ env.APP_NAME }} || echo "Binary is statically linked"
+
+      - name: Upload binary artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: worfdog-linux-amd64
+          path: worfdog
+          retention-days: 30
+
+  build-deb:
+    name: Build DEB Package
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        ubuntu:
+          - version: '24.04'
+            codename: noble
+          - version: '22.04'
+            codename: jammy
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache: true
+
+      - name: Get version
+        id: get_version
+        run: |
+          VERSION=${GITHUB_REF#refs/tags/}
+          # Remove 'v' prefix for deb version
+          VERSION=${VERSION#v}
+          echo "version=${VERSION:-0.0.0}" >> $GITHUB_OUTPUT
+
+      - name: Build static binary
+        run: |
+          CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build \
+            -ldflags="-s -w -X main.Version=${{ steps.get_version.outputs.version }}" \
+            -buildvcs=false \
+            -trimpath \
+            -o worfdog \
+            .
+
+      - name: Create DEB package structure
+        run: |
+          VERSION=${{ steps.get_version.outputs.version }}
+          CODENAME=${{ matrix.ubuntu.codename }}
+
+          # Create package directory structure
+          mkdir -p deb-package/DEBIAN
+          mkdir -p deb-package/usr/bin
+          mkdir -p deb-package/etc/worfdog
+          mkdir -p deb-package/lib/systemd/system
+          mkdir -p deb-package/var/lib/worfdog
+
+          # Copy binary
+          cp worfdog deb-package/usr/bin/
+          chmod 755 deb-package/usr/bin/worfdog
+
+          # Copy config example
+          cp worfdog.ini.example deb-package/etc/worfdog/worfdog.ini.example
+
+          # Copy systemd unit
+          cp worfdog.service deb-package/lib/systemd/system/
+
+          # Create DEBIAN/control
+          cat > deb-package/DEBIAN/control << EOF
+          Package: worfdog
+          Version: ${VERSION}
+          Section: utils
+          Priority: optional
+          Architecture: amd64
+          Maintainer: Warfdog Team
+          Description: Simple watchdog service for monitoring and auto-recovery
+           Warfdog is a watchdog service that monitors systemd services and
+           HTTPS endpoints, with automatic restart and system reboot capabilities.
+          Depends: systemd
+          EOF
+
+          # Create DEBIAN/postinst
+          cat > deb-package/DEBIAN/postinst << 'POSTINST'
+          #!/bin/bash
+          set -e
+
+          # Reload systemd to pick up new unit file
+          systemctl daemon-reload || true
+
+          # Enable but don't start the service
+          systemctl enable worfdog.service || true
+
+          exit 0
+          POSTINST
+          chmod 755 deb-package/DEBIAN/postinst
+
+          # Create DEBIAN/postrm
+          cat > deb-package/DEBIAN/postrm << 'POSTRM'
+          #!/bin/bash
+          set -e
+
+          if [ "$1" = "remove" ] || [ "$1" = "purge" ]; then
+            systemctl daemon-reload || true
+          fi
+
+          exit 0
+          POSTRM
+          chmod 755 deb-package/DEBIAN/postrm
+
+      - name: Build DEB package
+        run: |
+          VERSION=${{ steps.get_version.outputs.version }}
+          CODENAME=${{ matrix.ubuntu.codename }}
+          ARCH=amd64
+
+          # Build the package
+          dpkg-deb --build --root-owner-group deb-package worfdog_${VERSION}_${CODENAME}_${ARCH}.deb
+
+          # Verify the package
+          dpkg-deb --info worfdog_${VERSION}_${CODENAME}_${ARCH}.deb
+          dpkg-deb --field worfdog_${VERSION}_${CODENAME}_${ARCH}.deb
+
+      - name: Upload DEB artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: worfdog-${{ matrix.ubuntu.codename }}-amd64
+          path: worfdog_*.deb
+          retention-days: 30
+
+  release:
+    name: Create Release
+    needs: [build, build-deb]
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Get version
+        id: get_version
+        run: |
+          VERSION=${GITHUB_REF#refs/tags/}
+          echo "version=${VERSION:-dev}" >> $GITHUB_OUTPUT
+          echo "tag=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+
+      - name: Prepare release assets
+        run: |
+          cd artifacts
+
+          # Rename binary
+          mv worfdog-linux-amd64/worfdog worfdog-linux-amd64
+          chmod +x worfdog-linux-amd64
+
+          # List all artifacts
+          ls -la */
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: Release ${{ steps.get_version.outputs.tag }}
+          body: |
+            ## Warfdog ${{ steps.get_version.outputs.tag }}
+
+            ### Changes
+            - Static binary for Linux amd64
+            - DEB packages for Ubuntu 22.04 (Jammy) and 24.04 (Noble)
+            - Systemd unit file included
+
+            ### Installation
+
+            #### Using DEB package
+            ```bash
+            sudo dpkg -i worfdog_<version>_<codename>_amd64.deb
+            sudo systemctl enable worfdog
+            ```
+
+            #### Using binary directly
+            ```bash
+            sudo cp worfdog-linux-amd64 /usr/local/bin/worfdog
+            sudo chmod +x /usr/local/bin/worfdog
+            ```
+
+            ### Configuration
+            Create `/etc/worfdog/worfdog.ini` based on the example configuration.
+          draft: false
+          prerelease: ${{ contains(steps.get_version.outputs.tag, 'rc') || contains(steps.get_version.outputs.tag, 'alpha') || contains(steps.get_version.outputs.tag, 'beta') }}
+          files: |
+            artifacts/worfdog-linux-amd64
+            artifacts/worfdog-*/worfdog_*.deb
+          generate_release_notes: true

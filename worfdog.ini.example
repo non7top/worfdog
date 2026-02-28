@@ -1,0 +1,25 @@
+[reboot]
+enabled = true
+max_reboots = 3
+window_hours = 24
+# sudo_password = your_sudo_password_here
+
+[nginx]
+type = systemd
+unit = nginx
+
+[apache]
+type = systemd
+unit = apache2
+
+[webapp]
+type = https
+url = https://localhost:443/health
+timeout = 10
+
+[api]
+type = https
+url = https://localhost:8443/api/status
+timeout = 15
+# Optional custom restart command
+# restart_cmd = systemctl restart api-service

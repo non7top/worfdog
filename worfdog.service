@@ -1,0 +1,21 @@
+[Unit]
+Description=Worfdog Watchdog Service
+Documentation=https://github.com/non7top/worfdog
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/worfdog -config /etc/worfdog/worfdog.ini
+Restart=on-failure
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+
+# Security hardening
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/worfdog
+
+[Install]
+WantedBy=multi-user.target
