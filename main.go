@@ -164,10 +164,20 @@ func (w *Watchdog) attemptRecovery(serviceName string) {
 		return
 	}
 
+	// Get restart command for this service
+	restartCmd := targetPlugin.GetConfig().RestartCmd
+	if restartCmd == "" {
+		w.logger.Printf("Service %s has no restart command configured, considering reboot", serviceName)
+		if w.cfg.Reboot.Enabled {
+			w.attemptReboot(serviceName)
+		}
+		return
+	}
+
 	// Try to restart the service
-	w.logger.Printf("Attempting to restart service: %s (attempt %d/%d)", serviceName, restartCount, maxRestarts)
+	w.logger.Printf("Attempting to restart service: %s (attempt %d/%d) using: %s", serviceName, restartCount, maxRestarts, restartCmd)
 	if w.dryRun {
-		w.logger.Printf("[DRY RUN] Would restart %s", serviceName)
+		w.logger.Printf("[DRY RUN] Would restart %s using: %s", serviceName, restartCmd)
 		return
 	}
 	if err := targetPlugin.Restart(); err != nil {
