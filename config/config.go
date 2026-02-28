@@ -30,8 +30,14 @@ type RebootConfig struct {
 	SudoPassword  string // optional sudo password
 }
 
+// WorfdogConfig holds general worfdog configuration
+type WorfdogConfig struct {
+	InitialDelay int // initial delay before first check in seconds
+}
+
 // Config holds the entire configuration
 type Config struct {
+	Worfdog WorfdogConfig
 	Reboot  RebootConfig
 	Services []ServiceConfig
 }
@@ -45,6 +51,10 @@ func Load(path string) (*Config, error) {
 
 	cfg := &Config{}
 
+	// Parse worfdog section
+	worfdogSec := f.Section("worfdog")
+	cfg.Worfdog.InitialDelay = worfdogSec.Key("initial_delay").MustInt(30)
+
 	// Parse reboot section
 	rebootSec := f.Section("reboot")
 	cfg.Reboot.Enabled = rebootSec.Key("enabled").MustBool(false)
@@ -55,7 +65,7 @@ func Load(path string) (*Config, error) {
 
 	// Parse services
 	for _, section := range f.Sections() {
-		if section.Name() == "DEFAULT" || section.Name() == "reboot" {
+		if section.Name() == "DEFAULT" || section.Name() == "reboot" || section.Name() == "worfdog" {
 			continue
 		}
 

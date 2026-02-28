@@ -1,3 +1,7 @@
+[worfdog]
+# Initial delay before first health check (default: 30s, same as interval)
+# initial_delay = 30
+
 [reboot]
 enabled = true
 max_restarts = 3

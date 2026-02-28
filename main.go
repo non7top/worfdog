@@ -256,6 +256,7 @@ func (w *Watchdog) GetRebootTracker() *reboot.Tracker {
 func main() {
 	configPath := flag.String("config", "", "Path to configuration file")
 	interval := flag.Duration("interval", 30*time.Second, "Health check interval")
+	initialDelay := flag.Duration("initial-delay", 30*time.Second, "Initial delay before first check (default: same as interval)")
 	showStatus := flag.Bool("status", false, "Show current status and exit")
 	resetReboots := flag.Bool("reset-reboots", false, "Reset reboot counter")
 	showVersion := flag.Bool("version", false, "Show version and exit")
@@ -283,8 +284,20 @@ func main() {
 		os.Exit(1)
 	}
 
+	// Use config initial delay if not overridden by flag
+	initialDelayValue := *initialDelay
+	if initialDelayValue == 30*time.Second && cfg.Worfdog.InitialDelay != 30 {
+		initialDelayValue = time.Duration(cfg.Worfdog.InitialDelay) * time.Second
+	}
+
 	// Create watchdog
 	watchdog := NewWatchdog(cfg, *interval, *dryRun)
+
+	// Handle initial delay
+	if initialDelayValue > 0 {
+		watchdog.logger.Printf("Waiting %v before first check...", initialDelayValue)
+		time.Sleep(initialDelayValue)
+	}
 
 	// Handle status request
 	if *showStatus {
