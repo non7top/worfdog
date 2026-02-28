@@ -19,10 +19,11 @@ type ServiceConfig struct {
 
 // RebootConfig holds reboot-related configuration
 type RebootConfig struct {
-	Enabled      bool
-	MaxReboots   int    // maximum number of reboots allowed
-	WindowHours  int    // time window for counting reboots
-	SudoPassword string // optional sudo password
+	Enabled       bool
+	MaxRestarts   int    // maximum service restart attempts before reboot
+	MaxReboots    int    // maximum number of reboots allowed
+	WindowHours   int    // time window for counting reboots
+	SudoPassword  string // optional sudo password
 }
 
 // Config holds the entire configuration
@@ -43,6 +44,7 @@ func Load(path string) (*Config, error) {
 	// Parse reboot section
 	rebootSec := f.Section("reboot")
 	cfg.Reboot.Enabled = rebootSec.Key("enabled").MustBool(false)
+	cfg.Reboot.MaxRestarts = rebootSec.Key("max_restarts").MustInt(3)
 	cfg.Reboot.MaxReboots = rebootSec.Key("max_reboots").MustInt(3)
 	cfg.Reboot.WindowHours = rebootSec.Key("window_hours").MustInt(24)
 	cfg.Reboot.SudoPassword = rebootSec.Key("sudo_password").String()

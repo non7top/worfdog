@@ -19,20 +19,22 @@ var Version = "dev"
 
 // Watchdog is the main service that monitors and manages services
 type Watchdog struct {
-	cfg        *config.Config
-	plugins    []plugins.Plugin
+	cfg           *config.Config
+	plugins       []plugins.Plugin
 	rebootTracker *reboot.Tracker
-	interval   time.Duration
-	logger     *log.Logger
+	restartCounts map[string]int // track restart attempts per service
+	interval      time.Duration
+	logger        *log.Logger
 }
 
 // NewWatchdog creates a new watchdog instance
 func NewWatchdog(cfg *config.Config, interval time.Duration) *Watchdog {
 	w := &Watchdog{
-		cfg:      cfg,
-		plugins:  []plugins.Plugin{},
-		interval: interval,
-		logger:   log.New(os.Stdout, "[worfdog] ", log.LstdFlags),
+		cfg:           cfg,
+		plugins:       []plugins.Plugin{},
+		restartCounts: make(map[string]int),
+		interval:      interval,
+		logger:        log.New(os.Stdout, "[worfdog] ", log.LstdFlags),
 	}
 
 	// Initialize reboot tracker
@@ -119,8 +121,19 @@ func (w *Watchdog) attemptRecovery(serviceName string) {
 		return
 	}
 
+	// Increment restart count
+	w.restartCounts[serviceName]++
+	restartCount := w.restartCounts[serviceName]
+
+	// Check if we've exceeded max restarts
+	if w.cfg.Reboot.Enabled && restartCount > w.cfg.Reboot.MaxRestarts {
+		w.logger.Printf("Service %s exceeded max restarts (%d), considering reboot", serviceName, w.cfg.Reboot.MaxRestarts)
+		w.attemptReboot(serviceName)
+		return
+	}
+
 	// Try to restart the service
-	w.logger.Printf("Attempting to restart service: %s", serviceName)
+	w.logger.Printf("Attempting to restart service: %s (attempt %d/%d)", serviceName, restartCount, w.cfg.Reboot.MaxRestarts)
 	if err := targetPlugin.Restart(); err != nil {
 		w.logger.Printf("Failed to restart %s: %v", serviceName, err)
 
@@ -138,6 +151,8 @@ func (w *Watchdog) attemptRecovery(serviceName string) {
 	result := targetPlugin.Check()
 	if result.Status == plugins.StatusOK {
 		w.logger.Printf("Service %s recovered successfully", serviceName)
+		// Reset restart count on successful recovery
+		w.restartCounts[serviceName] = 0
 	} else {
 		w.logger.Printf("Service %s still unhealthy after restart: %s", serviceName, result.Message)
 
