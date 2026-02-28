@@ -3,6 +3,7 @@ package plugins
 import (
 	"crypto/tls"
 	"fmt"
+	"log"
 	"net"
 	"net/http"
 	"strings"
@@ -10,6 +11,8 @@ import (
 
 	"worfdog/config"
 )
+
+var logger = log.New(log.Writer(), "[worfdog] ", log.LstdFlags)
 
 // HTTPSPlugin monitors HTTPS endpoints
 type HTTPSPlugin struct {
@@ -86,6 +89,9 @@ func (p *HTTPSPlugin) Check() CheckResult {
 	}
 
 	for attempt := 1; attempt <= maxRetries; attempt++ {
+		if attempt > 1 {
+			logger.Printf("[%s] Retry attempt %d/%d", p.cfg.Name, attempt, maxRetries)
+		}
 		resp, err := p.client.Get(p.cfg.URL)
 		if err != nil {
 			if attempt < maxRetries {
