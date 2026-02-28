@@ -23,6 +23,7 @@ type Watchdog struct {
 	plugins       []plugins.Plugin
 	rebootTracker *reboot.Tracker
 	restartCounts map[string]int // track restart attempts per service
+	failureCounts map[string]int // track consecutive failures per service
 	interval      time.Duration
 	dryRun        bool // if true, only log actions without executing
 	logger        *log.Logger
@@ -34,6 +35,7 @@ func NewWatchdog(cfg *config.Config, interval time.Duration, dryRun bool) *Watch
 		cfg:           cfg,
 		plugins:       []plugins.Plugin{},
 		restartCounts: make(map[string]int),
+		failureCounts: make(map[string]int),
 		interval:      interval,
 		dryRun:        dryRun,
 		logger:        log.New(os.Stdout, "[worfdog] ", log.LstdFlags),
@@ -113,11 +115,31 @@ func (w *Watchdog) handleResult(result plugins.CheckResult) {
 	switch result.Status {
 	case plugins.StatusOK:
 		w.logger.Printf("[%s] %s: %s", result.Service, result.Status, result.Message)
+		// Reset failure count on success
+		w.failureCounts[result.Service] = 0
 	case plugins.StatusWarning:
 		w.logger.Printf("[%s] %s: %s", result.Service, result.Status, result.Message)
+		w.failureCounts[result.Service] = 0
 	case plugins.StatusCritical:
-		w.logger.Printf("[%s] %s: %s - attempting recovery", result.Service, result.Status, result.Message)
-		w.attemptRecovery(result.Service)
+		// Increment failure count
+		w.failureCounts[result.Service]++
+		failCount := w.failureCounts[result.Service]
+
+		// Get max retries for this service
+		maxRetries := 1
+		for _, svc := range w.cfg.Services {
+			if svc.Name == result.Service && svc.MaxRetries > 0 {
+				maxRetries = svc.MaxRetries
+				break
+			}
+		}
+
+		if failCount >= maxRetries {
+			w.logger.Printf("[%s] %s: %s (failure %d/%d) - attempting recovery", result.Service, result.Status, result.Message, failCount, maxRetries)
+			w.attemptRecovery(result.Service)
+		} else {
+			w.logger.Printf("[%s] %s: %s (failure %d/%d)", result.Service, result.Status, result.Message, failCount, maxRetries)
+		}
 	case plugins.StatusUnknown:
 		w.logger.Printf("[%s] %s: %s", result.Service, result.Status, result.Message)
 	}
@@ -192,8 +214,9 @@ func (w *Watchdog) attemptRecovery(serviceName string) {
 	result := targetPlugin.Check()
 	if result.Status == plugins.StatusOK {
 		w.logger.Printf("Service %s recovered successfully", serviceName)
-		// Reset restart count on successful recovery
+		// Reset restart and failure counts on successful recovery
 		w.restartCounts[serviceName] = 0
+		w.failureCounts[serviceName] = 0
 	} else {
 		w.logger.Printf("Service %s still unhealthy after restart: %s", serviceName, result.Message)
 
