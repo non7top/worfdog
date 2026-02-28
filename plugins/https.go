@@ -79,27 +79,45 @@ func (p *HTTPSPlugin) Check() CheckResult {
 		}
 	}
 
-	resp, err := p.client.Get(p.cfg.URL)
-	if err != nil {
-		return CheckResult{
-			Status:  StatusCritical,
-			Message: fmt.Sprintf("Connection failed: %v", err),
-			Service: p.cfg.Name,
-		}
+	var lastStatusCode int
+	maxRetries := p.cfg.MaxRetries
+	if maxRetries <= 0 {
+		maxRetries = 1
 	}
-	defer resp.Body.Close()
 
-	if resp.StatusCode >= 200 && resp.StatusCode < 400 {
-		return CheckResult{
-			Status:  StatusOK,
-			Message: fmt.Sprintf("HTTP %d", resp.StatusCode),
-			Service: p.cfg.Name,
+	for attempt := 1; attempt <= maxRetries; attempt++ {
+		resp, err := p.client.Get(p.cfg.URL)
+		if err != nil {
+			if attempt < maxRetries {
+				time.Sleep(2 * time.Second)
+				continue
+			}
+			return CheckResult{
+				Status:  StatusCritical,
+				Message: fmt.Sprintf("Connection failed: %v", err),
+				Service: p.cfg.Name,
+			}
+		}
+
+		lastStatusCode = resp.StatusCode
+		resp.Body.Close()
+
+		if lastStatusCode >= 200 && lastStatusCode < 400 {
+			return CheckResult{
+				Status:  StatusOK,
+				Message: fmt.Sprintf("HTTP %d", lastStatusCode),
+				Service: p.cfg.Name,
+			}
+		}
+
+		if attempt < maxRetries {
+			time.Sleep(2 * time.Second)
 		}
 	}
 
 	return CheckResult{
 		Status:  StatusCritical,
-		Message: fmt.Sprintf("HTTP %d", resp.StatusCode),
+		Message: fmt.Sprintf("HTTP %d", lastStatusCode),
 		Service: p.cfg.Name,
 	}
 }
