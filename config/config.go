@@ -65,7 +65,8 @@ func Load(path string) (*Config, error) {
 
 	// Parse services
 	for _, section := range f.Sections() {
-		if section.Name() == "DEFAULT" || section.Name() == "reboot" || section.Name() == "worfdog" {
+		// Skip sections without a type field (not services)
+		if section.Key("type").String() == "" {
 			continue
 		}
 
