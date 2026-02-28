@@ -36,7 +36,7 @@ func NewWatchdog(cfg *config.Config, interval time.Duration, dryRun bool) *Watch
 		restartCounts: make(map[string]int),
 		interval:      interval,
 		dryRun:        dryRun,
-		logger:        log.New(os.Stdout, fmt.Sprintf("[worfdog %s] ", Version), log.LstdFlags),
+		logger:        log.New(os.Stdout, "[worfdog] ", log.LstdFlags),
 	}
 
 	// Initialize reboot tracker
@@ -70,6 +70,27 @@ func NewWatchdog(cfg *config.Config, interval time.Duration, dryRun bool) *Watch
 
 // Run starts the watchdog monitoring loop
 func (w *Watchdog) Run() {
+	// Print version first
+	w.logger.Printf("Version: %s", Version)
+
+	// Dump reboot config
+	w.logger.Printf("Reboot config: enabled=%v, max_restarts=%d, max_reboots=%d, window_hours=%d",
+		w.cfg.Reboot.Enabled,
+		w.cfg.Reboot.MaxRestarts,
+		w.cfg.Reboot.MaxReboots,
+		w.cfg.Reboot.WindowHours)
+
+	// Dump service configs and warn about unsupported options
+	for _, svc := range w.cfg.Services {
+		w.logger.Printf("Service [%s]: type=%s, timeout=%d, max_restarts=%d",
+			svc.Name, svc.Type, svc.Timeout, svc.MaxRestarts)
+
+		// Warn about unsupported options
+		if svc.MaxRetries > 0 {
+			w.logger.Printf("WARNING: [%s] 'max_retries' is not supported, use check interval for retry timing", svc.Name)
+		}
+	}
+
 	w.logger.Printf("Starting watchdog with %d plugins, check interval: %v", len(w.plugins), w.interval)
 	w.logger.Println(w.rebootTracker.Status())
 
