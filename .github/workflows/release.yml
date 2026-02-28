@@ -210,8 +210,8 @@ jobs:
           cd artifacts
 
           # Rename binary
-          mv worfdog-linux-amd64/worfdog worfdog-linux-amd64
-          chmod +x worfdog-linux-amd64
+          mv worfdog-linux-amd64/worfdog worfdog-linux-amd64-binary
+          chmod +x worfdog-linux-amd64-binary
 
           # List all artifacts
           ls -la */
@@ -238,7 +238,7 @@ jobs:
 
             #### Using binary directly
             ```bash
-            sudo cp worfdog-linux-amd64 /usr/local/bin/worfdog
+            sudo cp worfdog-linux-amd64-binary /usr/local/bin/worfdog
             sudo chmod +x /usr/local/bin/worfdog
             ```
 
@@ -247,6 +247,6 @@ jobs:
           draft: false
           prerelease: ${{ contains(steps.get_version.outputs.tag, 'rc') || contains(steps.get_version.outputs.tag, 'alpha') || contains(steps.get_version.outputs.tag, 'beta') }}
           files: |
-            artifacts/worfdog-linux-amd64
+            artifacts/worfdog-linux-amd64-binary
             artifacts/worfdog-*/worfdog_*.deb
           generate_release_notes: true
