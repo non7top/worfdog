@@ -255,8 +255,8 @@ func (w *Watchdog) GetRebootTracker() *reboot.Tracker {
 
 func main() {
 	configPath := flag.String("config", "", "Path to configuration file")
-	interval := flag.Duration("interval", 30*time.Second, "Health check interval")
-	initialDelay := flag.Duration("initial-delay", 30*time.Second, "Initial delay before first check (default: same as interval)")
+	interval := flag.Duration("interval", 0, "Health check interval (default: from config or 30s)")
+	initialDelay := flag.Duration("initial-delay", 0, "Initial delay before first check (default: from config or same as interval)")
 	showStatus := flag.Bool("status", false, "Show current status and exit")
 	resetReboots := flag.Bool("reset-reboots", false, "Reset reboot counter")
 	showVersion := flag.Bool("version", false, "Show version and exit")
@@ -284,14 +284,21 @@ func main() {
 		os.Exit(1)
 	}
 
-	// Use config initial delay if not overridden by flag
+	// Use config values if not overridden by flags
+	intervalValue := *interval
+	if intervalValue == 0 {
+		intervalValue = time.Duration(cfg.Worfdog.Interval) * time.Second
+	}
+
 	initialDelayValue := *initialDelay
-	if initialDelayValue == 30*time.Second && cfg.Worfdog.InitialDelay != 30 {
+	if initialDelayValue == 0 {
 		initialDelayValue = time.Duration(cfg.Worfdog.InitialDelay) * time.Second
 	}
 
+	dryRunValue := *dryRun || cfg.Worfdog.DryRun
+
 	// Create watchdog
-	watchdog := NewWatchdog(cfg, *interval, *dryRun)
+	watchdog := NewWatchdog(cfg, intervalValue, dryRunValue)
 
 	// Handle initial delay
 	if initialDelayValue > 0 {

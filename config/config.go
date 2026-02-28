@@ -32,7 +32,9 @@ type RebootConfig struct {
 
 // WorfdogConfig holds general worfdog configuration
 type WorfdogConfig struct {
-	InitialDelay int // initial delay before first check in seconds
+	InitialDelay int  // initial delay before first check in seconds
+	Interval     int  // health check interval in seconds
+	DryRun       bool // dry run mode (log actions without executing)
 }
 
 // Config holds the entire configuration
@@ -54,6 +56,8 @@ func Load(path string) (*Config, error) {
 	// Parse worfdog section
 	worfdogSec := f.Section("worfdog")
 	cfg.Worfdog.InitialDelay = worfdogSec.Key("initial_delay").MustInt(30)
+	cfg.Worfdog.Interval = worfdogSec.Key("interval").MustInt(30)
+	cfg.Worfdog.DryRun = worfdogSec.Key("dry_run").MustBool(false)
 
 	// Parse reboot section
 	rebootSec := f.Section("reboot")
