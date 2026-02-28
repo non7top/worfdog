@@ -18,7 +18,6 @@ type ServiceConfig struct {
 	MaxRestarts       int    // max restart attempts before reboot (0 = use global default)
 	InsecureSkipVerify bool   // skip TLS certificate verification
 	TLSHostnames      string // comma-separated list of acceptable TLS hostnames
-	MaxRetries        int    // max retries for health check before marking as failed (0 = no retries)
 }
 
 // RebootConfig holds reboot-related configuration
@@ -69,7 +68,6 @@ func Load(path string) (*Config, error) {
 			MaxRestarts: section.Key("max_restarts").MustInt(0),
 			InsecureSkipVerify: section.Key("insecure_skip_verify").MustBool(false),
 			TLSHostnames: section.Key("tls_hostnames").String(),
-			MaxRetries: section.Key("max_retries").MustInt(0),
 		}
 
 		// Set defaults based on type
