@@ -3,7 +3,9 @@ package plugins
 import (
 	"crypto/tls"
 	"fmt"
+	"net"
 	"net/http"
+	"strings"
 	"time"
 
 	"worfdog/config"
@@ -17,14 +19,44 @@ type HTTPSPlugin struct {
 
 // NewHTTPSPlugin creates a new HTTPS monitoring plugin
 func NewHTTPSPlugin(cfg config.ServiceConfig) *HTTPSPlugin {
+	tlsConfig := &tls.Config{
+		InsecureSkipVerify: cfg.InsecureSkipVerify,
+	}
+
+	// If custom hostnames are specified, use custom verification
+	if cfg.TLSHostnames != "" {
+		hostnames := strings.Split(cfg.TLSHostnames, ",")
+		for i, h := range hostnames {
+			hostnames[i] = strings.TrimSpace(h)
+		}
+		tlsConfig.InsecureSkipVerify = true
+		tlsConfig.VerifyConnection = func(cs tls.ConnectionState) error {
+			// Check if any of the configured hostnames match the certificate
+			for _, certName := range cs.PeerCertificates[0].DNSNames {
+				for _, allowedName := range hostnames {
+					if certName == allowedName {
+						return nil
+					}
+				}
+			}
+			// Also check IP addresses
+			for _, certIP := range cs.PeerCertificates[0].IPAddresses {
+				for _, allowedName := range hostnames {
+					if ip := net.ParseIP(allowedName); ip != nil && ip.Equal(certIP) {
+						return nil
+					}
+				}
+			}
+			return fmt.Errorf("certificate not valid for any configured hostname")
+		}
+	}
+
 	return &HTTPSPlugin{
 		cfg: cfg,
 		client: &http.Client{
 			Timeout: time.Duration(cfg.Timeout) * time.Second,
 			Transport: &http.Transport{
-				TLSClientConfig: &tls.Config{
-					InsecureSkipVerify: false,
-				},
+				TLSClientConfig: tlsConfig,
 			},
 		},
 	}

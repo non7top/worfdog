@@ -19,6 +19,10 @@ max_restarts = 5
 type = https
 url = https://localhost:443/health
 timeout = 10
+# Skip TLS certificate verification (insecure)
+# insecure_skip_verify = true
+# Or specify acceptable certificate hostnames
+# tls_hostnames = s24.wr0.ru,localhost
 
 [api]
 type = https

@@ -9,13 +9,15 @@ import (
 
 // ServiceConfig holds configuration for a monitored service
 type ServiceConfig struct {
-	Name        string
-	Type        string // "systemd" or "https"
-	Unit        string // systemd unit name (for systemd type)
-	URL         string // URL to check (for https type)
-	Timeout     int    // timeout in seconds
-	RestartCmd  string // optional custom restart command
-	MaxRestarts int    // max restart attempts before reboot (0 = use global default)
+	Name              string
+	Type              string // "systemd" or "https"
+	Unit              string // systemd unit name (for systemd type)
+	URL               string // URL to check (for https type)
+	Timeout           int    // timeout in seconds
+	RestartCmd        string // optional custom restart command
+	MaxRestarts       int    // max restart attempts before reboot (0 = use global default)
+	InsecureSkipVerify bool   // skip TLS certificate verification
+	TLSHostnames      string // comma-separated list of acceptable TLS hostnames
 }
 
 // RebootConfig holds reboot-related configuration
@@ -64,6 +66,8 @@ func Load(path string) (*Config, error) {
 			Timeout:    section.Key("timeout").MustInt(10),
 			RestartCmd: section.Key("restart_cmd").String(),
 			MaxRestarts: section.Key("max_restarts").MustInt(0),
+			InsecureSkipVerify: section.Key("insecure_skip_verify").MustBool(false),
+			TLSHostnames: section.Key("tls_hostnames").String(),
 		}
 
 		// Set defaults based on type
