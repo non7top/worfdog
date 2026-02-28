@@ -12,6 +12,8 @@ unit = nginx
 [apache]
 type = systemd
 unit = apache2
+# Override max_restarts for this service only
+max_restarts = 5
 
 [webapp]
 type = https

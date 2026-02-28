@@ -15,6 +15,7 @@ type ServiceConfig struct {
 	URL         string // URL to check (for https type)
 	Timeout     int    // timeout in seconds
 	RestartCmd  string // optional custom restart command
+	MaxRestarts int    // max restart attempts before reboot (0 = use global default)
 }
 
 // RebootConfig holds reboot-related configuration
@@ -62,6 +63,7 @@ func Load(path string) (*Config, error) {
 			URL:        section.Key("url").String(),
 			Timeout:    section.Key("timeout").MustInt(10),
 			RestartCmd: section.Key("restart_cmd").String(),
+			MaxRestarts: section.Key("max_restarts").MustInt(0),
 		}
 
 		// Set defaults based on type

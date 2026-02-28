@@ -125,15 +125,24 @@ func (w *Watchdog) attemptRecovery(serviceName string) {
 	w.restartCounts[serviceName]++
 	restartCount := w.restartCounts[serviceName]
 
+	// Get max restarts for this service (service-specific or global default)
+	maxRestarts := w.cfg.Reboot.MaxRestarts
+	for _, svc := range w.cfg.Services {
+		if svc.Name == serviceName && svc.MaxRestarts > 0 {
+			maxRestarts = svc.MaxRestarts
+			break
+		}
+	}
+
 	// Check if we've exceeded max restarts
-	if w.cfg.Reboot.Enabled && restartCount > w.cfg.Reboot.MaxRestarts {
-		w.logger.Printf("Service %s exceeded max restarts (%d), considering reboot", serviceName, w.cfg.Reboot.MaxRestarts)
+	if w.cfg.Reboot.Enabled && restartCount > maxRestarts {
+		w.logger.Printf("Service %s exceeded max restarts (%d), considering reboot", serviceName, maxRestarts)
 		w.attemptReboot(serviceName)
 		return
 	}
 
 	// Try to restart the service
-	w.logger.Printf("Attempting to restart service: %s (attempt %d/%d)", serviceName, restartCount, w.cfg.Reboot.MaxRestarts)
+	w.logger.Printf("Attempting to restart service: %s (attempt %d/%d)", serviceName, restartCount, maxRestarts)
 	if err := targetPlugin.Restart(); err != nil {
 		w.logger.Printf("Failed to restart %s: %v", serviceName, err)
 
