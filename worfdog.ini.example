@@ -23,6 +23,8 @@ timeout = 10
 # insecure_skip_verify = true
 # Or specify acceptable certificate hostnames
 # tls_hostnames = s24.wr0.ru,localhost
+# Retry failed checks before marking as CRITICAL
+max_retries = 3
 
 [api]
 type = https

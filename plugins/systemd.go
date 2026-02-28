@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os/exec"
 	"strings"
+	"time"
 
 	"worfdog/config"
 )
@@ -37,34 +38,40 @@ func (p *SystemdPlugin) Check() CheckResult {
 		}
 	}
 
-	// Check service status using systemctl is-active
-	cmd := exec.Command("systemctl", "is-active", p.cfg.Unit)
-	output, err := cmd.CombinedOutput()
-	if err != nil {
-		// is-active returns non-zero if service is not active
+	maxRetries := p.cfg.MaxRetries
+	if maxRetries <= 0 {
+		maxRetries = 1
+	}
+
+	var lastStatus string
+
+	for attempt := 1; attempt <= maxRetries; attempt++ {
+		if attempt > 1 {
+			fmt.Printf("[worfdog] [%s] Retry attempt %d/%d\n", p.cfg.Name, attempt, maxRetries)
+			time.Sleep(2 * time.Second)
+		}
+
+		// Check service status using systemctl is-active
+		cmd := exec.Command("systemctl", "is-active", p.cfg.Unit)
+		output, err := cmd.CombinedOutput()
 		status := strings.TrimSpace(string(output))
 		if status == "" {
 			status = "unknown"
 		}
-		return CheckResult{
-			Status:  StatusCritical,
-			Message: fmt.Sprintf("Service inactive: %s", status),
-			Service: p.cfg.Name,
-		}
-	}
+		lastStatus = status
 
-	status := strings.TrimSpace(string(output))
-	if status == "active" {
-		return CheckResult{
-			Status:  StatusOK,
-			Message: "Service active",
-			Service: p.cfg.Name,
+		if err == nil && status == "active" {
+			return CheckResult{
+				Status:  StatusOK,
+				Message: "Service active",
+				Service: p.cfg.Name,
+			}
 		}
 	}
 
 	return CheckResult{
-		Status:  StatusWarning,
-		Message: fmt.Sprintf("Service status: %s", status),
+		Status:  StatusCritical,
+		Message: fmt.Sprintf("Service inactive: %s", lastStatus),
 		Service: p.cfg.Name,
 	}
 }

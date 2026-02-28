@@ -80,15 +80,10 @@ func (w *Watchdog) Run() {
 		w.cfg.Reboot.MaxReboots,
 		w.cfg.Reboot.WindowHours)
 
-	// Dump service configs and warn about unsupported options
+	// Dump service configs
 	for _, svc := range w.cfg.Services {
-		w.logger.Printf("Service [%s]: type=%s, timeout=%d, max_restarts=%d",
-			svc.Name, svc.Type, svc.Timeout, svc.MaxRestarts)
-
-		// Warn about unsupported options
-		if svc.MaxRetries > 0 {
-			w.logger.Printf("WARNING: [%s] 'max_retries' is not supported, use check interval for retry timing", svc.Name)
-		}
+		w.logger.Printf("Service [%s]: type=%s, timeout=%d, max_restarts=%d, max_retries=%d",
+			svc.Name, svc.Type, svc.Timeout, svc.MaxRestarts, svc.MaxRetries)
 	}
 
 	w.logger.Printf("Starting watchdog with %d plugins, check interval: %v", len(w.plugins), w.interval)
