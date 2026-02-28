@@ -52,7 +52,7 @@ jobs:
           ldd ${{ env.APP_NAME }} || echo "Binary is statically linked"
 
       - name: Upload binary artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: worfdog-linux-amd64
           path: worfdog
@@ -176,7 +176,7 @@ jobs:
           dpkg-deb --field worfdog_${VERSION}_${CODENAME}_${ARCH}.deb
 
       - name: Upload DEB artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: worfdog-${{ matrix.ubuntu.codename }}-amd64
           path: worfdog_*.deb
