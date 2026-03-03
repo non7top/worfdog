@@ -3,18 +3,12 @@ package config
 import (
 	"fmt"
 	"os"
+	"reflect"
 	"sort"
 	"strings"
 
 	"gopkg.in/ini.v1"
 )
-
-// ValidKeys defines the valid configuration keys for each section
-var ValidKeys = map[string][]string{
-	"worfdog": {"initial_delay", "interval", "dry_run"},
-	"reboot":  {"enabled", "max_restarts", "max_reboots", "window_hours", "sudo_password"},
-	"service": {"type", "unit", "url", "timeout", "restart_cmd", "max_restarts", "insecure_skip_verify", "tls_hostnames", "max_retries", "host", "port", "username", "password", "database"},
-}
 
 // ConfigWarning represents a configuration warning
 type ConfigWarning struct {
@@ -31,39 +25,62 @@ type Config struct {
 	Warnings []ConfigWarning
 }
 
+// getValidKeys extracts valid keys from a struct type using json tags
+func getValidKeys(structType reflect.Type) []string {
+	keys := make([]string, 0, structType.NumField())
+	for i := 0; i < structType.NumField(); i++ {
+		field := structType.Field(i)
+		if tag := field.Tag.Get("ini"); tag != "" && tag != "-" {
+			// Extract key name from ini tag (e.g., "initial_delay" from "initial_delay")
+			key := strings.Split(tag, ",")[0]
+			if key != "" {
+				keys = append(keys, key)
+			}
+		}
+	}
+	return keys
+}
+
+// ValidKeys defines the valid configuration keys for each section
+var ValidKeys = map[string][]string{
+	"worfdog": getValidKeys(reflect.TypeOf(WorfdogConfig{})),
+	"reboot":  getValidKeys(reflect.TypeOf(RebootConfig{})),
+	"service": getValidKeys(reflect.TypeOf(ServiceConfig{})),
+}
+
 // ServiceConfig holds configuration for a monitored service
 type ServiceConfig struct {
-	Name              string
-	Type              string // "systemd", "https", or "mysql"
-	Unit              string // systemd unit name (for systemd type)
-	URL               string // URL to check (for https type)
-	Host              string // host to connect to (for mysql type)
-	Port              int    // port to connect to (for mysql type)
-	Username          string // username (for mysql type)
-	Password          string // password (for mysql type)
-	Database          string // database name (for mysql type)
-	Timeout           int    // timeout in seconds
-	RestartCmd        string // optional custom restart command
-	MaxRestarts       int    // max restart attempts before reboot (0 = use global default)
-	InsecureSkipVerify bool   // skip TLS certificate verification
-	TLSHostnames      string // comma-separated list of acceptable TLS hostnames
-	MaxRetries        int    // max retries for health check before marking as failed
+	Name              string `ini:"-"`
+	Type              string `ini:"type"`               // "systemd", "https", or "mysql"
+	Unit              string `ini:"unit"`               // systemd unit name (for systemd type)
+	URL               string `ini:"url"`                // URL to check (for https type)
+	Host              string `ini:"host"`               // host to connect to (for mysql type)
+	Port              int    `ini:"port"`               // port to connect to (for mysql type)
+	Username          string `ini:"username"`           // username (for mysql type)
+	Password          string `ini:"password"`           // password (for mysql type)
+	Database          string `ini:"database"`           // database name (for mysql type)
+	Timeout           int    `ini:"timeout"`            // timeout in seconds
+	RestartCmd        string `ini:"restart_cmd"`        // optional custom restart command
+	MaxRestarts       int    `ini:"max_restarts"`       // max restart attempts before reboot (0 = use global default)
+	InsecureSkipVerify bool   `ini:"insecure_skip_verify"` // skip TLS certificate verification
+	TLSHostnames      string `ini:"tls_hostnames"`      // comma-separated list of acceptable TLS hostnames
+	MaxRetries        int    `ini:"max_retries"`        // max retries for health check before marking as failed
 }
 
 // RebootConfig holds reboot-related configuration
 type RebootConfig struct {
-	Enabled       bool
-	MaxRestarts   int    // maximum service restart attempts before reboot
-	MaxReboots    int    // maximum number of reboots allowed
-	WindowHours   int    // time window for counting reboots
-	SudoPassword  string // optional sudo password
+	Enabled      bool   `ini:"enabled"`       // enable/disable reboot
+	MaxRestarts  int    `ini:"max_restarts"`  // maximum service restart attempts before reboot
+	MaxReboots   int    `ini:"max_reboots"`   // maximum number of reboots allowed
+	WindowHours  int    `ini:"window_hours"`  // time window for counting reboots
+	SudoPassword string `ini:"sudo_password"` // optional sudo password
 }
 
 // WorfdogConfig holds general worfdog configuration
 type WorfdogConfig struct {
-	InitialDelay int  // initial delay before first check in seconds
-	Interval     int  // health check interval in seconds
-	DryRun       bool // dry run mode (log actions without executing)
+	InitialDelay int  `ini:"initial_delay"` // initial delay before first check in seconds
+	Interval     int  `ini:"interval"`      // health check interval in seconds
+	DryRun       bool `ini:"dry_run"`       // dry run mode (log actions without executing)
 }
 
 // Load reads and parses the INI configuration file
