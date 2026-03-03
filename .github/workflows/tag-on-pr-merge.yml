@@ -1,0 +1,69 @@
+name: Tag on PR Merge
+
+on:
+  pull_request:
+    types:
+      - closed
+
+permissions:
+  contents: write  # Required for creating tags
+  pull-requests: write  # Required for commenting on PRs
+
+jobs:
+  tag:
+    name: Create Tag on PR Merge
+    runs-on: ubuntu-latest
+    if: github.event.pull_request.merged == true
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Create Tag
+        uses: David-Lor/action-tag-on-pr-merge@0.0.3
+        id: tag-action
+        with:
+          push-tag: true
+          tag-regex: '^v(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-((?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\+([0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))?$'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Comment on PR if no tag found
+        if: steps.tag-action.outputs.tag == ''
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `⚠️ **No version tag found in PR body**
+
+            To automatically create a tag on merge, add a line in the PR body with the format:
+            \`\`\`
+            Tags vX.Y.Z
+            \`\`\`
+
+            Where X.Y.Z follows semantic versioning (e.g., Tags v1.2.3, Tags v0.3.7)
+
+            **Regex pattern:** \`^v(0|[1-9]\\d*)\\.(0|[1-9]\\d*)\\.(0|[1-9]\\d*)(?:-((?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\\.(?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\\+([0-9a-zA-Z-]+(?:\\.[0-9a-zA-Z-]+)*))?$\`
+
+            This PR was merged without creating a tag.`
+            })
+
+      - name: Comment on PR if tag created
+        if: steps.tag-action.outputs.tag != ''
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `✅ **Tag created: ${{ steps.tag-action.outputs.tag }}**
+
+            A new release tag has been created from this PR merge.
+            The Build and Release workflow will now run automatically.`
+            })

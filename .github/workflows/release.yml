@@ -3,8 +3,13 @@ name: Build and Release
 on:
   push:
     tags:
-      - 'v*'
+      - 'v*'  # Semantic versioning with v prefix: v1.2.3
   workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to release (e.g., 1.2.3)'
+        required: true
+        type: string
 
 permissions:
   contents: write
@@ -12,7 +17,7 @@ permissions:
 
 env:
   APP_NAME: worfdog
-  GO_VERSION: '1.21'
+  GO_VERSION: '1.22'
 
 jobs:
   build:
@@ -34,8 +39,13 @@ jobs:
       - name: Get version
         id: get_version
         run: |
-          VERSION=${GITHUB_REF#refs/tags/}
-          echo "version=${VERSION:-dev}" >> $GITHUB_OUTPUT
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            VERSION="v${{ github.event.inputs.version }}"
+          else
+            VERSION=${GITHUB_REF#refs/tags/}
+          fi
+          echo "version=${VERSION}" >> $GITHUB_OUTPUT
+          echo "tag=${VERSION}" >> $GITHUB_OUTPUT
 
       - name: Build static binary
         run: |
@@ -201,8 +211,13 @@ jobs:
       - name: Get version
         id: get_version
         run: |
-          VERSION=${GITHUB_REF#refs/tags/}
-          echo "version=${VERSION:-dev}" >> $GITHUB_OUTPUT
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            VERSION="v${{ github.event.inputs.version }}"
+          else
+            VERSION=${GITHUB_REF#refs/tags/}
+          fi
+          echo "version=${VERSION}" >> $GITHUB_OUTPUT
+          echo "tag=${VERSION}" >> $GITHUB_OUTPUT
           echo "tag=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
 
       - name: Prepare release assets
