@@ -284,6 +284,13 @@ func main() {
 		os.Exit(1)
 	}
 
+	// Log configuration warnings
+	if cfg.HasWarnings() {
+		for _, msg := range cfg.GetWarnings() {
+			fmt.Printf("[worfdog] WARNING: %s\n", msg)
+		}
+	}
+
 	// Use config values if not overridden by flags
 	intervalValue := *interval
 	if intervalValue == 0 {
