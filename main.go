@@ -58,6 +58,8 @@ func NewWatchdog(cfg *config.Config, interval time.Duration, dryRun bool) *Watch
 			p = plugins.NewSystemdPlugin(svcCfg)
 		case "https", "http":
 			p = plugins.NewHTTPSPlugin(svcCfg)
+		case "mysql":
+			p = plugins.NewMySQLPlugin(svcCfg)
 		default:
 			w.logger.Printf("WARNING: Unknown service type '%s' for %s, skipping", svcCfg.Type, svcCfg.Name)
 			continue

@@ -42,3 +42,14 @@ url = https://localhost:8443/api/status
 timeout = 15
 # Optional custom restart command
 # restart_cmd = systemctl restart api-service
+
+[mysql]
+type = mysql
+host = localhost
+port = 3306
+username = worfdog
+password = secret
+database = information_schema
+timeout = 5
+# Optional custom restart command
+# restart_cmd = systemctl restart mysql

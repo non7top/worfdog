@@ -13,7 +13,7 @@ import (
 var ValidKeys = map[string][]string{
 	"worfdog": {"initial_delay", "interval", "dry_run"},
 	"reboot":  {"enabled", "max_restarts", "max_reboots", "window_hours", "sudo_password"},
-	"service": {"type", "unit", "url", "timeout", "restart_cmd", "max_restarts", "insecure_skip_verify", "tls_hostnames", "max_retries"},
+	"service": {"type", "unit", "url", "timeout", "restart_cmd", "max_restarts", "insecure_skip_verify", "tls_hostnames", "max_retries", "host", "port", "username", "password", "database"},
 }
 
 // ConfigWarning represents a configuration warning
@@ -34,9 +34,14 @@ type Config struct {
 // ServiceConfig holds configuration for a monitored service
 type ServiceConfig struct {
 	Name              string
-	Type              string // "systemd" or "https"
+	Type              string // "systemd", "https", or "mysql"
 	Unit              string // systemd unit name (for systemd type)
 	URL               string // URL to check (for https type)
+	Host              string // host to connect to (for mysql type)
+	Port              int    // port to connect to (for mysql type)
+	Username          string // username (for mysql type)
+	Password          string // password (for mysql type)
+	Database          string // database name (for mysql type)
 	Timeout           int    // timeout in seconds
 	RestartCmd        string // optional custom restart command
 	MaxRestarts       int    // max restart attempts before reboot (0 = use global default)
@@ -100,6 +105,11 @@ func Load(path string) (*Config, error) {
 			Type:       section.Key("type").String(),
 			Unit:       section.Key("unit").String(),
 			URL:        section.Key("url").String(),
+			Host:       section.Key("host").String(),
+			Port:       section.Key("port").MustInt(3306),
+			Username:   section.Key("username").String(),
+			Password:   section.Key("password").String(),
+			Database:   section.Key("database").String(),
 			Timeout:    section.Key("timeout").MustInt(10),
 			RestartCmd: section.Key("restart_cmd").String(),
 			MaxRestarts: section.Key("max_restarts").MustInt(0),
