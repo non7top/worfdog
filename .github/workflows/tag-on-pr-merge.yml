@@ -5,6 +5,10 @@ on:
     types:
       - closed
 
+permissions:
+  contents: write  # Required for creating tags
+  pull-requests: write  # Required for commenting on PRs
+
 jobs:
   tag:
     name: Create Tag on PR Merge
