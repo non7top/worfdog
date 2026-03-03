@@ -3,8 +3,7 @@ name: Build and Release
 on:
   push:
     tags:
-      - 'v*'  # v-prefixed tags: v1.2.3
-      - '[0-9]+.[0-9]+.[0-9]+'  # Numeric tags: 1.2.3 (from tag-on-pr-merge action)
+      - 'v*'  # Semantic versioning with v prefix: v1.2.3
   workflow_dispatch:
     inputs:
       version:
