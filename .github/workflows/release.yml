@@ -3,7 +3,8 @@ name: Build and Release
 on:
   push:
     tags:
-      - 'v*'  # Match all v-prefixed tags
+      - 'v*'  # v-prefixed tags: v1.2.3
+      - '[0-9]+.[0-9]+.[0-9]+'  # Numeric tags: 1.2.3 (from tag-on-pr-merge action)
   workflow_dispatch:
     inputs:
       version:
