@@ -22,7 +22,7 @@ jobs:
           fetch-depth: 0
 
       - name: Create Tag
-        uses: David-Lor/action-tag-on-pr-merge@v1
+        uses: David-Lor/action-tag-on-pr-merge@v0.0.3
         id: tag-action
         with:
           push-tag: true
