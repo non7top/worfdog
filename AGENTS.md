@@ -240,14 +240,51 @@ go build -buildvcs=false -o worfdog .
 
 ### Creating a Release
 
-1. Create PR with `Tags vX.Y.Z` in body
-2. Merge PR → Tag created automatically
-3. Re-push tag to trigger release:
-   ```bash
-   git push origin --delete tag vX.Y.Z
-   git push origin vX.Y.Z
-   ```
-4. Monitor workflow: https://github.com/non7top/worfdog/actions
+1. Create PR with `Tags vX.Y.Z` in body (see workflow below)
+2. Wait for PR review and merge
+3. Release is created automatically by combined workflow
+
+### Branch and PR Workflow
+
+**IMPORTANT:** Always follow this exact workflow for new PRs:
+
+```bash
+# 1. Start from updated master
+git checkout master
+git pull --rebase
+
+# 2. Create new feature branch (NEVER reuse old branches)
+git checkout -b feature/description-of-change
+
+# 3. Make changes and commit
+git add -A
+git commit -m "Description of changes"
+
+# 4. Push and create PR
+git push -u origin feature/description-of-change
+gh pr create --title "Title" --body "Description"
+
+# 5. Leave PR open for review (NEVER merge autonomously)
+```
+
+**Rules:**
+- ❌ Never merge PRs autonomously
+- ❌ Never reuse old feature branches
+- ❌ Never push directly to master
+- ❌ Never create branches from other feature branches
+- ✅ Always start from fresh `master` checkout
+- ✅ Always create new branch for each PR
+- ✅ Always leave merge decisions to repository owner
+
+**Branch Cleanup:**
+Feature branches are purged after PR merge. If a branch still exists:
+```bash
+# Delete local branch
+git branch -d feature/old-branch
+
+# Delete remote branch
+git push origin --delete feature/old-branch
+```
 
 ### Debugging Config Issues
 
@@ -267,6 +304,8 @@ go build -buildvcs=false -o worfdog .
 See [CHANGELOG.md](CHANGELOG.md) for full history.
 
 **Recent Versions:**
+- v0.3.9 - Single architecture-independent DEB package
+- v0.3.8 - Combined tag-and-release workflow, AGENTS.md guide
 - v0.3.7 - Dependabot security update
 - v0.3.6 - v-prefixed tags for releases
 - v0.3.5 - Action version fix (0.0.3)
