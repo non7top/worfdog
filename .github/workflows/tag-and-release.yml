@@ -1,0 +1,104 @@
+name: Tag and Release on PR Merge
+
+on:
+  pull_request:
+    types:
+      - closed
+
+permissions:
+  contents: write
+  pull-requests: write
+  packages: write
+
+jobs:
+  tag-and-release:
+    name: Tag and Release
+    runs-on: ubuntu-latest
+    if: github.event.pull_request.merged == true
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Create Tag
+        uses: David-Lor/action-tag-on-pr-merge@0.0.3
+        id: tag-action
+        with:
+          push-tag: true
+          tag-regex: '^v(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-((?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\+([0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))?$'
+
+      - name: Set up Go
+        if: steps.tag-action.outputs.tag != ''
+        uses: actions/setup-go@v6
+        with:
+          go-version: '1.22'
+          cache: true
+
+      - name: Build static binary
+        if: steps.tag-action.outputs.tag != ''
+        run: |
+          CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build \
+            -ldflags="-s -w -X main.Version=${{ steps.tag-action.outputs.tag }}" \
+            -buildvcs=false \
+            -trimpath \
+            -o worfdog
+
+      - name: Build DEB (noble)
+        if: steps.tag-action.outputs.tag != ''
+        run: |
+          V=${{ steps.tag-action.outputs.tag }}
+          V=${V#v}
+          mkdir -p deb-package/DEBIAN deb-package/usr/bin deb-package/lib/systemd/system
+          cp worfdog deb-package/usr/bin/
+          cp worfdog.service deb-package/lib/systemd/system/
+          cat > deb-package/DEBIAN/control << EOF
+          Package: worfdog
+          Version: ${V}
+          Architecture: amd64
+          Maintainer: Worfdog Team
+          Description: Watchdog service
+          Depends: systemd
+          EOF
+          dpkg-deb --build --root-owner-group deb-package worfdog_${V}_noble_amd64.deb
+
+      - name: Build DEB (jammy)
+        if: steps.tag-action.outputs.tag != ''
+        run: |
+          V=${{ steps.tag-action.outputs.tag }}
+          V=${V#v}
+          dpkg-deb --build --root-owner-group deb-package worfdog_${V}_jammy_amd64.deb
+
+      - name: Create Release
+        if: steps.tag-action.outputs.tag != ''
+        id: release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: Release ${{ steps.tag-action.outputs.tag }}
+          files: |
+            worfdog
+            worfdog_*_noble_amd64.deb
+            worfdog_*_jammy_amd64.deb
+          tag_name: ${{ steps.tag-action.outputs.tag }}
+          generate_release_notes: true
+
+      - name: Comment if no tag
+        if: steps.tag-action.outputs.tag == ''
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              body: '⚠️ No tag found. Add `Tags vX.Y.Z` to PR body for auto-release.'
+            })
+
+      - name: Comment if released
+        if: steps.tag-action.outputs.tag != ''
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              body: '✅ Release ${{ steps.tag-action.outputs.tag }}: ${{ steps.release.outputs.url }}'
+            })
