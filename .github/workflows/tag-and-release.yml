@@ -61,7 +61,7 @@ jobs:
       - name: Download binary artifact
         uses: actions/download-artifact@v8
         with:
-          name: worfdog-binary-${{ needs.tag.outputs.tag }}
+          name: worfdog-${{ needs.tag.outputs.tag }}
           path: ./artifacts
 
       - name: Download DEB artifact

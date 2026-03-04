@@ -29,7 +29,7 @@ jobs:
           script: |
             const status = '${{ needs.build-test.result }}';
             const prNumber = context.issue.number;
-            const sha = context.sha.substring(0, 7);
+            const sha = '${{ github.event.pull_request.head.sha }}'.substring(0, 7);
             const runId = '${{ github.run_id }}';
             const artifactsUrl = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${runId}`;
 
@@ -39,7 +39,6 @@ jobs:
             | Artifact | Download |
             |----------|----------|
             | Binary | [worfdog](${artifactsUrl}) |
-            | Binary (versioned) | [worfdog-pr-${prNumber}-${sha}](${artifactsUrl}) |
             | DEB Package | [worfdog_*.deb](${artifactsUrl}) |
 
             **Version:** pr-${prNumber}-${sha}
