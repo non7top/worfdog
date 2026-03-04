@@ -45,30 +45,50 @@ jobs:
             -trimpath \
             -o worfdog
 
-      - name: Build DEB (noble)
+      - name: Build DEB package
         if: steps.tag-action.outputs.tag != ''
         run: |
           V=${{ steps.tag-action.outputs.tag }}
           V=${V#v}
-          mkdir -p deb-package/DEBIAN deb-package/usr/bin deb-package/lib/systemd/system
+          mkdir -p deb-package/DEBIAN deb-package/usr/bin deb-package/lib/systemd/system deb-package/usr/share/doc/worfdog
           cp worfdog deb-package/usr/bin/
+          chmod 755 deb-package/usr/bin/worfdog
           cp worfdog.service deb-package/lib/systemd/system/
+          cp README.md deb-package/usr/share/doc/worfdog/
           cat > deb-package/DEBIAN/control << EOF
           Package: worfdog
           Version: ${V}
+          Section: utils
+          Priority: optional
           Architecture: amd64
           Maintainer: Worfdog Team
-          Description: Watchdog service
+          Description: Simple watchdog service for monitoring and auto-recovery
+           Worfdog monitors systemd services, HTTPS endpoints, and MySQL connections.
+           It can automatically restart failed services and reboot the system if needed.
           Depends: systemd
           EOF
-          dpkg-deb --build --root-owner-group deb-package worfdog_${V}_noble_amd64.deb
-
-      - name: Build DEB (jammy)
-        if: steps.tag-action.outputs.tag != ''
-        run: |
-          V=${{ steps.tag-action.outputs.tag }}
-          V=${V#v}
-          dpkg-deb --build --root-owner-group deb-package worfdog_${V}_jammy_amd64.deb
+          cat > deb-package/DEBIAN/postinst << 'POSTINST'
+          #!/bin/bash
+          set -e
+          systemctl daemon-reload || true
+          if [ ! -f /etc/worfdog/worfdog.ini ]; then
+            mkdir -p /etc/worfdog
+            cp /usr/share/doc/worfdog/worfdog.ini.example /etc/worfdog/worfdog.ini 2>/dev/null || true
+          fi
+          exit 0
+          POSTINST
+          chmod 755 deb-package/DEBIAN/postinst
+          cat > deb-package/DEBIAN/postrm << 'POSTRM'
+          #!/bin/bash
+          set -e
+          if [ "$1" = "remove" ] || [ "$1" = "purge" ]; then
+            systemctl daemon-reload || true
+          fi
+          exit 0
+          POSTRM
+          chmod 755 deb-package/DEBIAN/postrm
+          echo "See /usr/share/doc/worfdog/README.md for documentation" > deb-package/DEBIAN/conffiles
+          dpkg-deb --build --root-owner-group deb-package worfdog_${V}_all.deb
 
       - name: Create Release
         if: steps.tag-action.outputs.tag != ''
@@ -78,8 +98,7 @@ jobs:
           name: Release ${{ steps.tag-action.outputs.tag }}
           files: |
             worfdog
-            worfdog_*_noble_amd64.deb
-            worfdog_*_jammy_amd64.deb
+            worfdog_*_all.deb
           tag_name: ${{ steps.tag-action.outputs.tag }}
           generate_release_notes: true
 

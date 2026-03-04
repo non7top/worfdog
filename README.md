@@ -7,6 +7,7 @@ A simple watchdog service written in Go that monitors services and can automatic
 - **Plugin-based architecture** for monitoring different service types
 - **HTTPS/HTTP monitoring** - Check web endpoints for availability
 - **Systemd service monitoring** - Monitor systemd unit status
+- **MySQL connectivity monitoring** - Check database connectivity
 - **Automatic service restart** - Restart failed services automatically
 - **System reboot on failure** - Reboot the server when service restart fails
 - **Reboot tracking** - Limit maximum number of reboots within a time window
@@ -20,23 +21,32 @@ A simple watchdog service written in Go that monitors services and can automatic
 Download the latest release from the [Releases page](https://github.com/non7top/worfdog/releases):
 
 ```bash
-# Download binary
-wget https://github.com/non7top/worfdog/releases/download/v0.1.2/worfdog-linux-amd64-binary
-sudo cp worfdog-linux-amd64-binary /usr/local/bin/worfdog
+# Download static binary
+wget https://github.com/non7top/worfdog/releases/download/v0.3.8/worfdog
+sudo cp worfdog /usr/local/bin/
 sudo chmod +x /usr/local/bin/worfdog
 ```
 
-### From DEB Package (Ubuntu)
+### From DEB Package (Recommended)
+
+Single DEB package works on all Debian/Ubuntu systems:
 
 ```bash
-# Ubuntu 24.04 (Noble)
-wget https://github.com/non7top/worfdog/releases/download/v0.1.2/worfdog_0.1.2_noble_amd64.deb
-sudo dpkg -i worfdog_0.1.2_noble_amd64.deb
+# Download DEB package
+wget https://github.com/non7top/worfdog/releases/download/v0.3.8/worfdog_0.3.8_all.deb
 
-# Ubuntu 22.04 (Jammy)
-wget https://github.com/non7top/worfdog/releases/download/v0.1.2/worfdog_0.1.2_jammy_amd64.deb
-sudo dpkg -i worfdog_0.1.2_jammy_amd64.deb
+# Install
+sudo dpkg -i worfdog_0.3.8_all.deb
+
+# Enable and start service
+sudo systemctl enable worfdog
+sudo systemctl start worfdog
 ```
+
+The DEB package includes:
+- Static binary in `/usr/bin/worfdog`
+- Systemd service unit
+- Example configuration in `/usr/share/doc/worfdog/`
 
 ### Build from Source
 
