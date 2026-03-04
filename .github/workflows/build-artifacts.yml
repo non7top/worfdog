@@ -1,0 +1,123 @@
+name: Build Artifacts
+
+on:
+  workflow_call:
+    inputs:
+      version:
+        description: 'Version string (e.g., v0.3.9 or pr-13-abc1234)'
+        required: true
+        type: string
+    outputs:
+      binary-name:
+        description: 'Name of the binary artifact'
+        value: ${{ jobs.build.outputs.binary-name }}
+      deb-name:
+        description: 'Name of the DEB artifact'
+        value: ${{ jobs.build.outputs.deb-name }}
+
+jobs:
+  build:
+    name: Build Binary and DEB
+    runs-on: ubuntu-latest
+    outputs:
+      binary-name: ${{ steps.version.outputs.binary-name }}
+      deb-name: ${{ steps.version.outputs.deb-name }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set version outputs
+        id: version
+        run: |
+          V="${{ inputs.version }}"
+          V="${V#v}"  # Remove v prefix for filenames
+          echo "binary-name=worfdog-${V}" >> $GITHUB_OUTPUT
+          echo "deb-name=worfdog_${V}_all.deb" >> $GITHUB_OUTPUT
+
+      - name: Set up Go
+        uses: actions/setup-go@v6
+        with:
+          go-version: '1.22'
+          cache: true
+
+      - name: Build static binary
+        run: |
+          CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build \
+            -ldflags="-s -w -X main.Version=${{ inputs.version }}" \
+            -buildvcs=false \
+            -trimpath \
+            -o worfdog \
+            .
+
+      - name: Verify static binary
+        run: |
+          file worfdog
+          ldd worfdog || echo "Binary is statically linked"
+
+      - name: Build DEB package
+        run: |
+          V="${{ inputs.version }}"
+          V="${V#v}"
+
+          mkdir -p deb-package/DEBIAN deb-package/usr/bin deb-package/lib/systemd/system deb-package/usr/share/doc/worfdog
+
+          cp worfdog deb-package/usr/bin/
+          chmod 755 deb-package/usr/bin/worfdog
+          cp worfdog.service deb-package/lib/systemd/system/
+          cp README.md deb-package/usr/share/doc/worfdog/
+
+          cat > deb-package/DEBIAN/control << EOF
+          Package: worfdog
+          Version: ${V}
+          Section: utils
+          Priority: optional
+          Architecture: all
+          Maintainer: Worfdog Team
+          Description: Simple watchdog service for monitoring and auto-recovery
+           Worfdog monitors systemd services, HTTPS endpoints, and MySQL connections.
+           It can automatically restart failed services and reboot the system if needed.
+          Depends: systemd
+          EOF
+
+          cat > deb-package/DEBIAN/postinst << 'POSTINST'
+          #!/bin/bash
+          set -e
+          systemctl daemon-reload || true
+          if [ ! -f /etc/worfdog/worfdog.ini ]; then
+            mkdir -p /etc/worfdog
+            cp /usr/share/doc/worfdog/worfdog.ini.example /etc/worfdog/worfdog.ini 2>/dev/null || true
+          fi
+          exit 0
+          POSTINST
+          chmod 755 deb-package/DEBIAN/postinst
+
+          cat > deb-package/DEBIAN/postrm << 'POSTRM'
+          #!/bin/bash
+          set -e
+          if [ "$1" = "remove" ] || [ "$1" = "purge" ]; then
+            systemctl daemon-reload || true
+          fi
+          exit 0
+          POSTRM
+          chmod 755 deb-package/DEBIAN/postrm
+
+          echo "/etc/worfdog/worfdog.ini" > deb-package/DEBIAN/conffiles
+
+          dpkg-deb --build --root-owner-group deb-package worfdog_${V}_all.deb
+
+      - name: Upload binary artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: worfdog-binary
+          path: worfdog
+          retention-days: 30
+
+      - name: Upload DEB artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: worfdog-deb
+          path: worfdog_*.deb
+          retention-days: 30
