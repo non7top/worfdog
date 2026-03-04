@@ -20,6 +20,6 @@ jobs:
           fetch-depth: 0
 
       - name: Check for merge commits
-        uses: motlin/forbid-merge-commits-action@v1
+        uses: motlin/forbid-merge-commits-action@v1.0.7
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
