@@ -38,12 +38,13 @@ jobs:
 
             | Artifact | Download |
             |----------|----------|
-            | Binary | [worfdog-pr-${prNumber}-${sha}](${artifactsUrl}) |
+            | Binary | [worfdog](${artifactsUrl}) |
+            | Binary (versioned) | [worfdog-pr-${prNumber}-${sha}](${artifactsUrl}) |
             | DEB Package | [worfdog_*.deb](${artifactsUrl}) |
 
             **Version:** pr-${prNumber}-${sha}
 
-            **Note:** Artifacts are uploaded as uncompressed files for faster download (GitHub Actions feature).
+            **Note:** Artifacts are uncompressed for faster download (GitHub Actions v7 feature).
             Click on the artifact names above to download. Artifacts expire after 30 days.`
               : `❌ **Build failed for PR #${prNumber}**
 

@@ -138,12 +138,17 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: worfdog-binary-${{ inputs.version }}
-          path: |
-            worfdog
-            worfdog-${{ inputs.version }}
+          path: worfdog
           retention-days: 30
-          compression-level: 0
-          include-hidden-files: false
+          overwrite: true
+          archive: false
+
+      - name: Upload versioned binary artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: worfdog-${{ inputs.version }}
+          path: worfdog-${{ inputs.version }}
+          retention-days: 30
           overwrite: true
           archive: false
 
@@ -153,7 +158,5 @@ jobs:
           name: worfdog-deb-${{ inputs.version }}
           path: worfdog_*.deb
           retention-days: 30
-          compression-level: 0
-          include-hidden-files: false
           overwrite: true
           archive: false
