@@ -74,6 +74,8 @@ jobs:
         run: |
           # Use the deb-name output which has valid DEB version format
           DEB_NAME="${{ steps.version.outputs.deb-name }}"
+          # Extract version from filename (worfdog_VERSION_all.deb)
+          DEB_V=$(echo "$DEB_NAME" | sed 's/worfdog_\(.*\)_all.deb/\1/')
           
           mkdir -p deb-package/DEBIAN deb-package/usr/bin deb-package/lib/systemd/system deb-package/usr/share/doc/worfdog
           
@@ -86,7 +88,7 @@ jobs:
 
           cat > deb-package/DEBIAN/control << EOF
           Package: worfdog
-          Version: ${DEB_NAME%.deb}
+          Version: ${DEB_V}
           Section: utils
           Priority: optional
           Architecture: all
