@@ -1,0 +1,25 @@
+name: Forbid Merge Commits
+
+on:
+  pull_request:
+    branches:
+      - master
+
+permissions:
+  contents: read
+
+jobs:
+  check-merge-commits:
+    name: Check for Merge Commits
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check for merge commits
+        uses: motlin/forbid-merge-commits-action@v1.0.7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
