@@ -11,10 +11,12 @@ permissions:
   packages: write
 
 jobs:
-  tag-and-release:
-    name: Tag and Release
+  tag:
+    name: Create Tag
     runs-on: ubuntu-latest
     if: github.event.pull_request.merged == true
+    outputs:
+      tag: ${{ steps.tag-action.outputs.tag }}
 
     steps:
       - name: Checkout
@@ -29,96 +31,75 @@ jobs:
           push-tag: true
           tag-regex: '^v(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-((?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\+([0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))?$'
 
-      - name: Set up Go
-        if: steps.tag-action.outputs.tag != ''
-        uses: actions/setup-go@v6
-        with:
-          go-version: '1.22'
-          cache: true
-
-      - name: Build static binary
-        if: steps.tag-action.outputs.tag != ''
-        run: |
-          CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build \
-            -ldflags="-s -w -X main.Version=${{ steps.tag-action.outputs.tag }}" \
-            -buildvcs=false \
-            -trimpath \
-            -o worfdog
-
-      - name: Build DEB package
-        if: steps.tag-action.outputs.tag != ''
-        run: |
-          V=${{ steps.tag-action.outputs.tag }}
-          V=${V#v}
-          mkdir -p deb-package/DEBIAN deb-package/usr/bin deb-package/lib/systemd/system deb-package/usr/share/doc/worfdog
-          cp worfdog deb-package/usr/bin/
-          chmod 755 deb-package/usr/bin/worfdog
-          cp worfdog.service deb-package/lib/systemd/system/
-          cp README.md deb-package/usr/share/doc/worfdog/
-          cat > deb-package/DEBIAN/control << EOF
-          Package: worfdog
-          Version: ${V}
-          Section: utils
-          Priority: optional
-          Architecture: amd64
-          Maintainer: Worfdog Team
-          Description: Simple watchdog service for monitoring and auto-recovery
-           Worfdog monitors systemd services, HTTPS endpoints, and MySQL connections.
-           It can automatically restart failed services and reboot the system if needed.
-          Depends: systemd
-          EOF
-          cat > deb-package/DEBIAN/postinst << 'POSTINST'
-          #!/bin/bash
-          set -e
-          systemctl daemon-reload || true
-          if [ ! -f /etc/worfdog/worfdog.ini ]; then
-            mkdir -p /etc/worfdog
-            cp /usr/share/doc/worfdog/worfdog.ini.example /etc/worfdog/worfdog.ini 2>/dev/null || true
-          fi
-          exit 0
-          POSTINST
-          chmod 755 deb-package/DEBIAN/postinst
-          cat > deb-package/DEBIAN/postrm << 'POSTRM'
-          #!/bin/bash
-          set -e
-          if [ "$1" = "remove" ] || [ "$1" = "purge" ]; then
-            systemctl daemon-reload || true
-          fi
-          exit 0
-          POSTRM
-          chmod 755 deb-package/DEBIAN/postrm
-          # conffiles lists config files to preserve during upgrades
-          echo "/etc/worfdog/worfdog.ini" > deb-package/DEBIAN/conffiles
-          dpkg-deb --build --root-owner-group deb-package worfdog_${V}_all.deb
-
-      - name: Create Release
-        if: steps.tag-action.outputs.tag != ''
-        id: release
-        uses: softprops/action-gh-release@v2
-        with:
-          name: Release ${{ steps.tag-action.outputs.tag }}
-          files: |
-            worfdog
-            worfdog_*_all.deb
-          tag_name: ${{ steps.tag-action.outputs.tag }}
-          generate_release_notes: true
-
       - name: Comment if no tag
         if: steps.tag-action.outputs.tag == ''
         uses: actions/github-script@v7
         with:
           script: |
             github.rest.issues.createComment({
-              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: github.event.pull_request.number,
               body: '⚠️ No tag found. Add `Tags vX.Y.Z` to PR body for auto-release.'
             })
 
-      - name: Comment if released
-        if: steps.tag-action.outputs.tag != ''
+  build-and-release:
+    name: Build and Release
+    needs: tag
+    if: needs.tag.outputs.tag != ''
+    uses: ./.github/workflows/build-artifacts.yml
+    with:
+      version: ${{ needs.tag.outputs.tag }}
+
+  publish-release:
+    name: Publish Release
+    needs: [tag, build-and-release]
+    runs-on: ubuntu-latest
+    if: needs.tag.outputs.tag != ''
+
+    steps:
+      - name: Download binary artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: worfdog-binary
+          path: ./artifacts
+
+      - name: Download DEB artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: worfdog-deb
+          path: ./artifacts
+
+      - name: Create Release
+        id: release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: Release ${{ needs.tag.outputs.tag }}
+          files: |
+            ./artifacts/worfdog
+            ./artifacts/worfdog_*.deb
+          tag_name: ${{ needs.tag.outputs.tag }}
+          generate_release_notes: true
+
+      - name: Comment on PR
         uses: actions/github-script@v7
         with:
           script: |
             github.rest.issues.createComment({
-              issue_number: context.issue.number,
-              body: '✅ Release ${{ steps.tag-action.outputs.tag }}: ${{ steps.release.outputs.url }}'
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: github.event.pull_request.number,
+              body: `✅ Release ${{ needs.tag.outputs.tag }} created!
+            
+            | Asset | Download |
+            |-------|----------|
+            | Binary | [worfdog](${{ steps.release.outputs.url }}) |
+            | DEB Package | [worfdog_*_all.deb](${{ steps.release.outputs.url }}) |
+            
+            **Release URL:** ${{ steps.release.outputs.url }}
+            
+            The release includes:
+            - Static binary for Linux amd64
+            - DEB package (architecture-independent, works on all Debian/Ubuntu systems)
+            - Systemd unit file`
             })
