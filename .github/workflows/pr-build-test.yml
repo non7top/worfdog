@@ -14,7 +14,7 @@ jobs:
     name: Build Test
     uses: ./.github/workflows/build-artifacts.yml
     with:
-      version: pr-${{ github.event.pull_request.number }}-${{ github.sha }}
+      version: pr-${{ github.event.pull_request.number }}-${{ github.event.pull_request.head.sha }}
 
   report:
     name: Report Build Status

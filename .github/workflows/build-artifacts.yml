@@ -34,8 +34,18 @@ jobs:
         run: |
           V="${{ inputs.version }}"
           V="${V#v}"  # Remove v prefix for filenames
+          
+          # DEB version must start with digit and use valid chars
+          # Convert pr-N-SHA to 0.0.0-pr.N.SHA
+          DEB_V="${V//./_}"  # Replace dots with underscores
+          DEB_V="${DEB_V//-/.}"  # Replace dashes with dots
+          if [[ "$DEB_V" == pr.* ]]; then
+            DEB_V="0.0.0.${DEB_V}"
+          fi
+          
           echo "binary-name=worfdog-${V}" >> $GITHUB_OUTPUT
-          echo "deb-name=worfdog_${V}_all.deb" >> $GITHUB_OUTPUT
+          echo "deb-name=worfdog_${DEB_V}_all.deb" >> $GITHUB_OUTPUT
+          echo "Using DEB version: ${DEB_V}"
 
       - name: Set up Go
         uses: actions/setup-go@v6
@@ -59,8 +69,10 @@ jobs:
 
       - name: Build DEB package
         run: |
-          V="${{ inputs.version }}"
-          V="${V#v}"
+          # Use the deb-name output which has valid DEB version format
+          DEB_NAME="${{ steps.version.outputs.deb-name }}"
+          # Extract version from filename (worfdog_VERSION_all.deb)
+          DEB_V=$(echo "$DEB_NAME" | sed 's/worfdog_\(.*\)_all.deb/\1/')
 
           mkdir -p deb-package/DEBIAN deb-package/usr/bin deb-package/lib/systemd/system deb-package/usr/share/doc/worfdog
 
@@ -71,7 +83,7 @@ jobs:
 
           cat > deb-package/DEBIAN/control << EOF
           Package: worfdog
-          Version: ${V}
+          Version: ${DEB_V}
           Section: utils
           Priority: optional
           Architecture: all
