@@ -30,23 +30,25 @@ jobs:
             const status = '${{ needs.build-test.result }}';
             const prNumber = context.issue.number;
             const sha = context.sha.substring(0, 7);
+            const runId = '${{ github.run_id }}';
+            const artifactsUrl = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${runId}`;
 
             const body = status === 'success'
               ? `✅ **Build successful for PR #${prNumber}**
 
-            | Artifact | Status |
-            |----------|--------|
-            | Binary | ✅ Built |
-            | DEB Package | ✅ Built |
+            | Artifact | Download |
+            |----------|----------|
+            | Binary | [worfdog-pr-${prNumber}-${sha}](${artifactsUrl}) |
+            | DEB Package | [worfdog_*.deb](${artifactsUrl}) |
 
             **Version:** pr-${prNumber}-${sha}
 
-            Artifacts are available in the workflow run.`
+            Click on the artifact names above to download. Artifacts expire after 30 days.`
               : `❌ **Build failed for PR #${prNumber}**
 
             **Version:** pr-${prNumber}-${sha}
 
-            Check the [workflow logs](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}) for details.`;
+            Check the [workflow logs](${artifactsUrl}) for details.`;
 
             github.rest.issues.createComment({
               issue_number: context.issue.number,
