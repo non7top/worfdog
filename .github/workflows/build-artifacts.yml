@@ -37,16 +37,13 @@ jobs:
         run: |
           V="${{ inputs.version }}"
           V="${V#v}"  # Remove v prefix for filenames
+          PR="${{ github.event.pull_request.number }}"
           SHA="${{ github.event.pull_request.head.sha }}"
           SHORT_SHA="${SHA:0:7}"
           
           # DEB version must start with digit and use valid chars
-          # Convert pr-N-SHA to 0.0.0-pr.N.SHA
-          DEB_V="${V//./_}"  # Replace dots with underscores
-          DEB_V="${DEB_V//-/.}"  # Replace dashes with dots
-          if [[ "$DEB_V" == pr.* ]]; then
-            DEB_V="0.0.0.${DEB_V}"
-          fi
+          # Convert pr-N-SHA to 0.0.0.pr.N.SHA
+          DEB_V="0.0.0.pr.${PR}.${SHORT_SHA}"
           
           echo "binary-name=worfdog-${V}" >> $GITHUB_OUTPUT
           echo "deb-name=worfdog_${DEB_V}_all.deb" >> $GITHUB_OUTPUT
