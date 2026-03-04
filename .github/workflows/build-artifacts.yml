@@ -151,3 +151,4 @@ jobs:
           path: worfdog_*.deb
           retention-days: 30
           compression-level: 0
+          include-hidden-files: false

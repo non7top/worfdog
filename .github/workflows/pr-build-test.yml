@@ -43,6 +43,7 @@ jobs:
 
             **Version:** pr-${prNumber}-${sha}
 
+            **Note:** Artifacts are uploaded as uncompressed files for faster download (GitHub Actions feature).
             Click on the artifact names above to download. Artifacts expire after 30 days.`
               : `❌ **Build failed for PR #${prNumber}**
 
