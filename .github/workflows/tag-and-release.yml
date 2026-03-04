@@ -87,7 +87,8 @@ jobs:
           exit 0
           POSTRM
           chmod 755 deb-package/DEBIAN/postrm
-          echo "See /usr/share/doc/worfdog/README.md for documentation" > deb-package/DEBIAN/conffiles
+          # conffiles lists config files to preserve during upgrades
+          echo "/etc/worfdog/worfdog.ini" > deb-package/DEBIAN/conffiles
           dpkg-deb --build --root-owner-group deb-package worfdog_${V}_all.deb
 
       - name: Create Release
