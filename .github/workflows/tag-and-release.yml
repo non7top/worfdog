@@ -33,7 +33,7 @@ jobs:
 
       - name: Comment if no tag
         if: steps.tag-action.outputs.tag == ''
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         with:
           script: |
             github.rest.issues.createComment({
@@ -82,7 +82,7 @@ jobs:
           generate_release_notes: true
 
       - name: Comment on PR
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         with:
           script: |
             github.rest.issues.createComment({
