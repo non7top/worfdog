@@ -121,7 +121,7 @@ func (t *Tracker) cleanOldReboots() {
 func (t *Tracker) save() error {
 	// Ensure directory exists
 	dir := "/var/lib/worfdog"
-	if err := os.MkdirAll(dir, 0755); err != nil {
+	if err := os.MkdirAll(dir, 0o755); err != nil {
 		return err
 	}
 
@@ -130,7 +130,7 @@ func (t *Tracker) save() error {
 		return err
 	}
 
-	return os.WriteFile(t.rebootFile, data, 0644)
+	return os.WriteFile(t.rebootFile, data, 0o644)
 }
 
 // load restores the reboot state from disk

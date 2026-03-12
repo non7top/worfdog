@@ -43,7 +43,7 @@ func TestBuildBinary(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Binary not found: %v", err)
 	}
-	if info.Mode()&0111 == 0 {
+	if info.Mode()&0o111 == 0 {
 		t.Error("Binary is not executable")
 	}
 }
