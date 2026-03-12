@@ -17,7 +17,7 @@ initial_delay = 30
 interval = 30
 dry_run = false
 `
-	if err := os.WriteFile(configPath, []byte(validConfig), 0644); err != nil {
+	if err := os.WriteFile(configPath, []byte(validConfig), 0o644); err != nil {
 		t.Fatalf("failed to write config: %v", err)
 	}
 
@@ -36,7 +36,7 @@ dry_run = false
 initial_delay = 30
 unknown_option = true
 `
-	if err := os.WriteFile(configPath, []byte(invalidConfig), 0644); err != nil {
+	if err := os.WriteFile(configPath, []byte(invalidConfig), 0o644); err != nil {
 		t.Fatalf("failed to write config: %v", err)
 	}
 
@@ -73,7 +73,7 @@ max_restarts = 3
 max_reboots = 3
 window_hours = 24
 `
-	if err := os.WriteFile(configPath, []byte(validConfig), 0644); err != nil {
+	if err := os.WriteFile(configPath, []byte(validConfig), 0o644); err != nil {
 		t.Fatalf("failed to write config: %v", err)
 	}
 
@@ -92,7 +92,7 @@ window_hours = 24
 enabled = true
 invalid_key = 123
 `
-	if err := os.WriteFile(configPath, []byte(invalidConfig), 0644); err != nil {
+	if err := os.WriteFile(configPath, []byte(invalidConfig), 0o644); err != nil {
 		t.Fatalf("failed to write config: %v", err)
 	}
 
@@ -124,7 +124,7 @@ type = systemd
 unit = nginx
 max_restarts = 5
 `
-	if err := os.WriteFile(configPath, []byte(validConfig), 0644); err != nil {
+	if err := os.WriteFile(configPath, []byte(validConfig), 0o644); err != nil {
 		t.Fatalf("failed to write config: %v", err)
 	}
 
@@ -144,7 +144,7 @@ type = https
 url = https://localhost/health
 bad_option = true
 `
-	if err := os.WriteFile(configPath, []byte(invalidConfig), 0644); err != nil {
+	if err := os.WriteFile(configPath, []byte(invalidConfig), 0o644); err != nil {
 		t.Fatalf("failed to write config: %v", err)
 	}
 
@@ -184,7 +184,7 @@ type = systemd
 unit = nginx
 service_bad = 3
 `
-	if err := os.WriteFile(configPath, []byte(config), 0644); err != nil {
+	if err := os.WriteFile(configPath, []byte(config), 0o644); err != nil {
 		t.Fatalf("failed to write config: %v", err)
 	}
 
@@ -219,7 +219,7 @@ func TestGetWarnings(t *testing.T) {
 zeta_option = 1
 alpha_option = 2
 `
-	if err := os.WriteFile(configPath, []byte(config), 0644); err != nil {
+	if err := os.WriteFile(configPath, []byte(config), 0o644); err != nil {
 		t.Fatalf("failed to write config: %v", err)
 	}
 
@@ -247,7 +247,7 @@ func TestWarningString(t *testing.T) {
 [worfdog]
 bad_option = 1
 `
-	if err := os.WriteFile(configPath, []byte(config), 0644); err != nil {
+	if err := os.WriteFile(configPath, []byte(config), 0o644); err != nil {
 		t.Fatalf("failed to write config: %v", err)
 	}
 
@@ -299,7 +299,7 @@ tls_hostnames = localhost,example.com
 insecure_skip_verify = false
 restart_cmd = systemctl restart webapp
 `
-	if err := os.WriteFile(configPath, []byte(config), 0644); err != nil {
+	if err := os.WriteFile(configPath, []byte(config), 0o644); err != nil {
 		t.Fatalf("failed to write config: %v", err)
 	}
 

@@ -124,7 +124,7 @@ enabled = false
 type = systemd
 unit = nginx
 `
-	if err := os.WriteFile(configPath, []byte(configContent), 0644); err != nil {
+	if err := os.WriteFile(configPath, []byte(configContent), 0o644); err != nil {
 		t.Fatalf("failed to write test config: %v", err)
 	}
 
