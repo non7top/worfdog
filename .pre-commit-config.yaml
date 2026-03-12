@@ -7,6 +7,14 @@ repos:
       - id: check-yaml
       - id: check-json
 
+  - repo: https://github.com/TekWizely/pre-commit-golang
+    rev: v1.0.0-rc.4
+    hooks:
+      # Unique hooks NOT covered by golangci-lint
+      - id: go-mod-tidy           # Ensure go.mod/go.sum are tidy
+      - id: go-fumpt              # Stricter gofmt (auto-fix)
+      - id: go-vulncheck-mod      # Security vulnerability scan
+
   - repo: https://github.com/golangci/golangci-lint
     rev: v2.11.3
     hooks:
