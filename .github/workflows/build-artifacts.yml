@@ -40,11 +40,11 @@ jobs:
           PR="${{ github.event.pull_request.number }}"
           SHA="${{ github.event.pull_request.head.sha }}"
           SHORT_SHA="${SHA:0:7}"
-          
+
           # DEB version must start with digit and use valid chars
           # Convert pr-N-SHA to 0.0.0.pr.N.SHA
           DEB_V="0.0.0.pr.${PR}.${SHORT_SHA}"
-          
+
           echo "binary-name=worfdog-${V}" >> $GITHUB_OUTPUT
           echo "deb-name=worfdog_${DEB_V}_all.deb" >> $GITHUB_OUTPUT
           echo "short-sha=${SHORT_SHA}" >> $GITHUB_OUTPUT
@@ -76,9 +76,9 @@ jobs:
           DEB_NAME="${{ steps.version.outputs.deb-name }}"
           # Extract version from filename (worfdog_VERSION_all.deb)
           DEB_V=$(echo "$DEB_NAME" | sed 's/worfdog_\(.*\)_all.deb/\1/')
-          
+
           mkdir -p deb-package/DEBIAN deb-package/usr/bin deb-package/lib/systemd/system deb-package/usr/share/doc/worfdog
-          
+
           # Copy binary and service files
           cp worfdog deb-package/usr/bin/
           chmod 755 deb-package/usr/bin/worfdog
@@ -120,11 +120,11 @@ jobs:
           exit 0
           POSTRM
           chmod 755 deb-package/DEBIAN/postrm
-          
+
           # Copy example config to etc (will be preserved on upgrade)
           mkdir -p deb-package/etc/worfdog
           cp worfdog.ini.example deb-package/etc/worfdog/worfdog.ini
-          
+
           # conffiles lists config files to preserve during upgrades
           echo "/etc/worfdog/worfdog.ini" > deb-package/DEBIAN/conffiles
 
