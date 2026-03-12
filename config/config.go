@@ -50,21 +50,21 @@ var ValidKeys = map[string][]string{
 
 // ServiceConfig holds configuration for a monitored service
 type ServiceConfig struct {
-	Name              string `ini:"-"`
-	Type              string `ini:"type"`               // "systemd", "https", or "mysql"
-	Unit              string `ini:"unit"`               // systemd unit name (for systemd type)
-	URL               string `ini:"url"`                // URL to check (for https type)
-	Host              string `ini:"host"`               // host to connect to (for mysql type)
-	Port              int    `ini:"port"`               // port to connect to (for mysql type)
-	Username          string `ini:"username"`           // username (for mysql type)
-	Password          string `ini:"password"`           // password (for mysql type)
-	Database          string `ini:"database"`           // database name (for mysql type)
-	Timeout           int    `ini:"timeout"`            // timeout in seconds
-	RestartCmd        string `ini:"restart_cmd"`        // optional custom restart command
-	MaxRestarts       int    `ini:"max_restarts"`       // max restart attempts before reboot (0 = use global default)
+	Name               string `ini:"-"`
+	Type               string `ini:"type"`                 // "systemd", "https", or "mysql"
+	Unit               string `ini:"unit"`                 // systemd unit name (for systemd type)
+	URL                string `ini:"url"`                  // URL to check (for https type)
+	Host               string `ini:"host"`                 // host to connect to (for mysql type)
+	Port               int    `ini:"port"`                 // port to connect to (for mysql type)
+	Username           string `ini:"username"`             // username (for mysql type)
+	Password           string `ini:"password"`             // password (for mysql type)
+	Database           string `ini:"database"`             // database name (for mysql type)
+	Timeout            int    `ini:"timeout"`              // timeout in seconds
+	RestartCmd         string `ini:"restart_cmd"`          // optional custom restart command
+	MaxRestarts        int    `ini:"max_restarts"`         // max restart attempts before reboot (0 = use global default)
 	InsecureSkipVerify bool   `ini:"insecure_skip_verify"` // skip TLS certificate verification
-	TLSHostnames      string `ini:"tls_hostnames"`      // comma-separated list of acceptable TLS hostnames
-	MaxRetries        int    `ini:"max_retries"`        // max retries for health check before marking as failed
+	TLSHostnames       string `ini:"tls_hostnames"`        // comma-separated list of acceptable TLS hostnames
+	MaxRetries         int    `ini:"max_retries"`          // max retries for health check before marking as failed
 }
 
 // RebootConfig holds reboot-related configuration
@@ -118,21 +118,21 @@ func Load(path string) (*Config, error) {
 		}
 
 		svc := ServiceConfig{
-			Name:       section.Name(),
-			Type:       section.Key("type").String(),
-			Unit:       section.Key("unit").String(),
-			URL:        section.Key("url").String(),
-			Host:       section.Key("host").String(),
-			Port:       section.Key("port").MustInt(3306),
-			Username:   section.Key("username").String(),
-			Password:   section.Key("password").String(),
-			Database:   section.Key("database").String(),
-			Timeout:    section.Key("timeout").MustInt(10),
-			RestartCmd: section.Key("restart_cmd").String(),
-			MaxRestarts: section.Key("max_restarts").MustInt(0),
+			Name:               section.Name(),
+			Type:               section.Key("type").String(),
+			Unit:               section.Key("unit").String(),
+			URL:                section.Key("url").String(),
+			Host:               section.Key("host").String(),
+			Port:               section.Key("port").MustInt(3306),
+			Username:           section.Key("username").String(),
+			Password:           section.Key("password").String(),
+			Database:           section.Key("database").String(),
+			Timeout:            section.Key("timeout").MustInt(10),
+			RestartCmd:         section.Key("restart_cmd").String(),
+			MaxRestarts:        section.Key("max_restarts").MustInt(0),
 			InsecureSkipVerify: section.Key("insecure_skip_verify").MustBool(false),
-			TLSHostnames: section.Key("tls_hostnames").String(),
-			MaxRetries: section.Key("max_retries").MustInt(0),
+			TLSHostnames:       section.Key("tls_hostnames").String(),
+			MaxRetries:         section.Key("max_retries").MustInt(0),
 		}
 
 		// Validate service section
