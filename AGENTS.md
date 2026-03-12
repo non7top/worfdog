@@ -167,7 +167,7 @@ Fix bug in HTTPS plugin.
 
 ### release.yml
 
-**Trigger:** 
+**Trigger:**
 - Push to tags matching `v*`
 - Manual workflow_dispatch
 

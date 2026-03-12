@@ -95,14 +95,14 @@ jobs:
               repo: context.repo.repo,
               issue_number: github.event.pull_request.number,
               body: `✅ Release ${{ needs.tag.outputs.tag }} created!
-            
+
             | Asset | Download |
             |-------|----------|
             | Binary | [worfdog](${{ steps.release.outputs.url }}) |
             | DEB Package | [worfdog_*_all.deb](${{ steps.release.outputs.url }}) |
-            
+
             **Release URL:** ${{ steps.release.outputs.url }}
-            
+
             The release includes:
             - Static binary for Linux amd64
             - DEB package (architecture-independent, works on all Debian/Ubuntu systems)
