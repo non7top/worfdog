@@ -36,11 +36,16 @@ jobs:
         uses: actions/github-script@v8
         with:
           script: |
+            const prNumber = context.issue.number || (context.payload.pull_request?.number);
+            if (!prNumber) {
+              console.log('No PR number available, skipping comment');
+              return;
+            }
             github.rest.issues.createComment({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              issue_number: github.event.pull_request.number,
-              body: '⚠️ No tag found. Add `Tags vX.Y.Z` to PR body for auto-release.'
+              issue_number: prNumber,
+              body: 'ℹ️ No release tag found in PR body. This is expected for non-release PRs (e.g., Dependabot updates, bug fixes).\n\nTo trigger an automatic release, add `Tags vX.Y.Z` to the PR body (e.g., `Tags v0.3.10`).'
             })
 
   build-and-release:
