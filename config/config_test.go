@@ -18,12 +18,12 @@ interval = 30
 dry_run = false
 `
 	if err := os.WriteFile(configPath, []byte(validConfig), 0644); err != nil {
-		t.Fatalf("Failed to write config: %v", err)
+		t.Fatalf("failed to write config: %v", err)
 	}
 
 	cfg, err := Load(configPath)
 	if err != nil {
-		t.Fatalf("Failed to load config: %v", err)
+		t.Fatalf("failed to load config: %v", err)
 	}
 
 	if cfg.HasWarnings() {
@@ -37,12 +37,12 @@ initial_delay = 30
 unknown_option = true
 `
 	if err := os.WriteFile(configPath, []byte(invalidConfig), 0644); err != nil {
-		t.Fatalf("Failed to write config: %v", err)
+		t.Fatalf("failed to write config: %v", err)
 	}
 
 	cfg, err = Load(configPath)
 	if err != nil {
-		t.Fatalf("Failed to load config: %v", err)
+		t.Fatalf("failed to load config: %v", err)
 	}
 
 	if !cfg.HasWarnings() {
@@ -74,12 +74,12 @@ max_reboots = 3
 window_hours = 24
 `
 	if err := os.WriteFile(configPath, []byte(validConfig), 0644); err != nil {
-		t.Fatalf("Failed to write config: %v", err)
+		t.Fatalf("failed to write config: %v", err)
 	}
 
 	cfg, err := Load(configPath)
 	if err != nil {
-		t.Fatalf("Failed to load config: %v", err)
+		t.Fatalf("failed to load config: %v", err)
 	}
 
 	if cfg.HasWarnings() {
@@ -93,12 +93,12 @@ enabled = true
 invalid_key = 123
 `
 	if err := os.WriteFile(configPath, []byte(invalidConfig), 0644); err != nil {
-		t.Fatalf("Failed to write config: %v", err)
+		t.Fatalf("failed to write config: %v", err)
 	}
 
 	cfg, err = Load(configPath)
 	if err != nil {
-		t.Fatalf("Failed to load config: %v", err)
+		t.Fatalf("failed to load config: %v", err)
 	}
 
 	found := false
@@ -125,12 +125,12 @@ unit = nginx
 max_restarts = 5
 `
 	if err := os.WriteFile(configPath, []byte(validConfig), 0644); err != nil {
-		t.Fatalf("Failed to write config: %v", err)
+		t.Fatalf("failed to write config: %v", err)
 	}
 
 	cfg, err := Load(configPath)
 	if err != nil {
-		t.Fatalf("Failed to load config: %v", err)
+		t.Fatalf("failed to load config: %v", err)
 	}
 
 	if cfg.HasWarnings() {
@@ -145,12 +145,12 @@ url = https://localhost/health
 bad_option = true
 `
 	if err := os.WriteFile(configPath, []byte(invalidConfig), 0644); err != nil {
-		t.Fatalf("Failed to write config: %v", err)
+		t.Fatalf("failed to write config: %v", err)
 	}
 
 	cfg, err = Load(configPath)
 	if err != nil {
-		t.Fatalf("Failed to load config: %v", err)
+		t.Fatalf("failed to load config: %v", err)
 	}
 
 	found := false
@@ -185,12 +185,12 @@ unit = nginx
 service_bad = 3
 `
 	if err := os.WriteFile(configPath, []byte(config), 0644); err != nil {
-		t.Fatalf("Failed to write config: %v", err)
+		t.Fatalf("failed to write config: %v", err)
 	}
 
 	cfg, err := Load(configPath)
 	if err != nil {
-		t.Fatalf("Failed to load config: %v", err)
+		t.Fatalf("failed to load config: %v", err)
 	}
 
 	if !cfg.HasWarnings() {
@@ -220,12 +220,12 @@ zeta_option = 1
 alpha_option = 2
 `
 	if err := os.WriteFile(configPath, []byte(config), 0644); err != nil {
-		t.Fatalf("Failed to write config: %v", err)
+		t.Fatalf("failed to write config: %v", err)
 	}
 
 	cfg, err := Load(configPath)
 	if err != nil {
-		t.Fatalf("Failed to load config: %v", err)
+		t.Fatalf("failed to load config: %v", err)
 	}
 
 	warnings := cfg.GetWarnings()
@@ -248,12 +248,12 @@ func TestWarningString(t *testing.T) {
 bad_option = 1
 `
 	if err := os.WriteFile(configPath, []byte(config), 0644); err != nil {
-		t.Fatalf("Failed to write config: %v", err)
+		t.Fatalf("failed to write config: %v", err)
 	}
 
 	cfg, err := Load(configPath)
 	if err != nil {
-		t.Fatalf("Failed to load config: %v", err)
+		t.Fatalf("failed to load config: %v", err)
 	}
 
 	warningStr := cfg.WarningString()
@@ -300,12 +300,12 @@ insecure_skip_verify = false
 restart_cmd = systemctl restart webapp
 `
 	if err := os.WriteFile(configPath, []byte(config), 0644); err != nil {
-		t.Fatalf("Failed to write config: %v", err)
+		t.Fatalf("failed to write config: %v", err)
 	}
 
 	cfg, err := Load(configPath)
 	if err != nil {
-		t.Fatalf("Failed to load config: %v", err)
+		t.Fatalf("failed to load config: %v", err)
 	}
 
 	if cfg.HasWarnings() {

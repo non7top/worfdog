@@ -32,7 +32,7 @@ func TestBuildBinary(t *testing.T) {
 	cmd.Dir = projectRoot
 	output, err := cmd.CombinedOutput()
 	if err != nil {
-		t.Fatalf("Failed to build binary: %v\n%s", err, string(output))
+		t.Fatalf("failed to build binary: %v\n%s", err, string(output))
 	}
 
 	// Clean up
@@ -57,14 +57,14 @@ func TestVersionFlag(t *testing.T) {
 	cmd := exec.Command("go", "build", "-buildvcs=false", "-o", binary, ".")
 	cmd.Dir = projectRoot
 	if out, err := cmd.CombinedOutput(); err != nil {
-		t.Fatalf("Failed to build: %v\n%s", err, string(out))
+		t.Fatalf("failed to build: %v\n%s", err, string(out))
 	}
 	defer os.Remove(binary)
 
 	cmd = exec.Command(binary, "-version")
 	output, err := cmd.CombinedOutput()
 	if err != nil {
-		t.Fatalf("Failed to run version command: %v\n%s", err, string(output))
+		t.Fatalf("failed to run version command: %v\n%s", err, string(output))
 	}
 
 	if !strings.Contains(string(output), "worfdog") {
@@ -81,14 +81,14 @@ func TestHelpFlag(t *testing.T) {
 	cmd := exec.Command("go", "build", "-buildvcs=false", "-o", binary, ".")
 	cmd.Dir = projectRoot
 	if out, err := cmd.CombinedOutput(); err != nil {
-		t.Fatalf("Failed to build: %v\n%s", err, string(out))
+		t.Fatalf("failed to build: %v\n%s", err, string(out))
 	}
 	defer os.Remove(binary)
 
 	cmd = exec.Command(binary, "-h")
 	output, err := cmd.CombinedOutput()
 	if err != nil {
-		t.Fatalf("Failed to run help command: %v\n%s", err, string(output))
+		t.Fatalf("failed to run help command: %v\n%s", err, string(output))
 	}
 
 	helpOutput := string(output)
@@ -109,7 +109,7 @@ func TestDryRunFlag(t *testing.T) {
 	cmd := exec.Command("go", "build", "-buildvcs=false", "-o", binary, ".")
 	cmd.Dir = projectRoot
 	if out, err := cmd.CombinedOutput(); err != nil {
-		t.Fatalf("Failed to build: %v\n%s", err, string(out))
+		t.Fatalf("failed to build: %v\n%s", err, string(out))
 	}
 	defer os.Remove(binary)
 
@@ -125,7 +125,7 @@ type = systemd
 unit = nginx
 `
 	if err := os.WriteFile(configPath, []byte(configContent), 0644); err != nil {
-		t.Fatalf("Failed to write test config: %v", err)
+		t.Fatalf("failed to write test config: %v", err)
 	}
 
 	// Run with dry_run and short timeout
@@ -135,7 +135,7 @@ unit = nginx
 
 	// Start the command
 	if err := cmd.Start(); err != nil {
-		t.Fatalf("Failed to start command: %v", err)
+		t.Fatalf("failed to start command: %v", err)
 	}
 
 	// Give it a moment to start
@@ -143,7 +143,7 @@ unit = nginx
 
 	// Kill it (it should be running)
 	if err := cmd.Process.Kill(); err != nil {
-		t.Fatalf("Failed to kill process: %v", err)
+		t.Fatalf("failed to kill process: %v", err)
 	}
 }
 
@@ -154,7 +154,7 @@ func TestLoadDefaultConfig(t *testing.T) {
 
 	cfg, err := config.Load(configPath)
 	if err != nil {
-		t.Fatalf("Failed to load example config: %v", err)
+		t.Fatalf("failed to load example config: %v", err)
 	}
 
 	if cfg == nil {
