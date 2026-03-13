@@ -7,6 +7,13 @@ repos:
       - id: check-yaml
       - id: check-json
 
+  - repo: https://github.com/compilerla/conventional-pre-commit
+    rev: v4.1.0
+    hooks:
+      - id: conventional-pre-commit
+        stages: [commit-msg]
+        args: [--type=feat,--type=fix,--type=chore,--type=docs,--type=style,--type=refactor,--type=test,--type=ci,--type=perf,--type=revert]
+
   - repo: https://github.com/TekWizely/pre-commit-golang
     rev: v1.0.0-rc.4
     hooks:
