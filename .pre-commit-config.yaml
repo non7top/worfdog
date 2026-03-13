@@ -12,7 +12,7 @@ repos:
     hooks:
       - id: conventional-pre-commit
         stages: [commit-msg]
-        args: [--type=feat,--type=fix,--type=chore,--type=docs,--type=style,--type=refactor,--type=test,--type=ci,--type=perf,--type=revert]
+        args: [feat, fix, chore, docs, style, refactor, test, ci, perf, revert]
 
   - repo: https://github.com/TekWizely/pre-commit-golang
     rev: v1.0.0-rc.4
