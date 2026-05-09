@@ -4,7 +4,7 @@ go 1.25.4
 
 require (
 	github.com/go-sql-driver/mysql v1.9.3
-	gopkg.in/ini.v1 v1.67.1
+	gopkg.in/ini.v1 v1.67.2
 )
 
 require filippo.io/edwards25519 v1.1.1 // indirect
