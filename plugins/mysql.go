@@ -13,13 +13,13 @@ import (
 
 // MySQLPlugin monitors MySQL database connectivity
 type MySQLPlugin struct {
-	cfg config.ServiceConfig
+	base
 }
 
 // NewMySQLPlugin creates a new MySQL monitoring plugin
 func NewMySQLPlugin(cfg config.ServiceConfig) *MySQLPlugin {
 	return &MySQLPlugin{
-		cfg: cfg,
+		base: base{cfg: cfg},
 	}
 }
 
@@ -33,14 +33,6 @@ func mysqlDSN(cfg config.ServiceConfig) string {
 	c.DBName = cfg.Database
 	c.Timeout = time.Duration(cfg.Timeout) * time.Second
 	return c.FormatDSN()
-}
-
-func (p *MySQLPlugin) Name() string {
-	return p.cfg.Name
-}
-
-func (p *MySQLPlugin) GetConfig() config.ServiceConfig {
-	return p.cfg
 }
 
 func (p *MySQLPlugin) Check() CheckResult {
@@ -88,11 +80,4 @@ func (p *MySQLPlugin) Check() CheckResult {
 		Message: fmt.Sprintf("Connected to %s:%d", p.cfg.Host, p.cfg.Port),
 		Service: p.cfg.Name,
 	}
-}
-
-func (p *MySQLPlugin) Restart() error {
-	if p.cfg.RestartCmd != "" {
-		return executeCommand(p.cfg.RestartCmd, restartTimeout)
-	}
-	return fmt.Errorf("no restart command configured for %s", p.cfg.Name)
 }

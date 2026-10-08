@@ -12,22 +12,14 @@ import (
 
 // SystemdPlugin monitors systemd services
 type SystemdPlugin struct {
-	cfg config.ServiceConfig
+	base
 }
 
 // NewSystemdPlugin creates a new systemd monitoring plugin
 func NewSystemdPlugin(cfg config.ServiceConfig) *SystemdPlugin {
 	return &SystemdPlugin{
-		cfg: cfg,
+		base: base{cfg: cfg},
 	}
-}
-
-func (p *SystemdPlugin) Name() string {
-	return p.cfg.Name
-}
-
-func (p *SystemdPlugin) GetConfig() config.ServiceConfig {
-	return p.cfg
 }
 
 func (p *SystemdPlugin) checkTimeout() time.Duration {

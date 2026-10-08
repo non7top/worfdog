@@ -1,7 +1,9 @@
 package config
 
 import (
+	"errors"
 	"fmt"
+	"math"
 	"os"
 	"reflect"
 	"sort"
@@ -83,7 +85,46 @@ type WorfdogConfig struct {
 	DryRun       bool `ini:"dry_run"`       // dry run mode (log actions without executing)
 }
 
-// Load reads and parses the INI configuration file
+// loader collects every problem found while parsing so they are reported together.
+type loader struct {
+	errs []error
+}
+
+func (l *loader) fail(section, key, format string, args ...any) {
+	l.errs = append(l.errs, fmt.Errorf("[%s] %s: %s", section, key, fmt.Sprintf(format, args...)))
+}
+
+// intKey reads an integer in [min, max]; an absent key yields def.
+func (l *loader) intKey(sec *ini.Section, name string, def, min, max int) int {
+	if !sec.HasKey(name) {
+		return def
+	}
+	v, err := sec.Key(name).Int()
+	if err != nil {
+		l.fail(sec.Name(), name, "%q is not an integer", sec.Key(name).String())
+		return def
+	}
+	if v < min || v > max {
+		l.fail(sec.Name(), name, "%d is out of range (%d-%d)", v, min, max)
+		return def
+	}
+	return v
+}
+
+// boolKey reads a boolean; an absent key yields def.
+func (l *loader) boolKey(sec *ini.Section, name string, def bool) bool {
+	if !sec.HasKey(name) {
+		return def
+	}
+	v, err := sec.Key(name).Bool()
+	if err != nil {
+		l.fail(sec.Name(), name, "%q is not a boolean", sec.Key(name).String())
+		return def
+	}
+	return v
+}
+
+// Load reads, parses and validates the INI configuration file
 func Load(path string) (*Config, error) {
 	f, err := ini.Load(path)
 	if err != nil {
@@ -93,26 +134,24 @@ func Load(path string) (*Config, error) {
 	cfg := &Config{
 		Warnings: []ConfigWarning{},
 	}
+	l := &loader{}
 
-	// Validate worfdog section
 	worfdogSec := f.Section("worfdog")
-	cfg.Worfdog.InitialDelay = worfdogSec.Key("initial_delay").MustInt(30)
-	cfg.Worfdog.Interval = worfdogSec.Key("interval").MustInt(30)
-	cfg.Worfdog.DryRun = worfdogSec.Key("dry_run").MustBool(false)
+	cfg.Worfdog.InitialDelay = l.intKey(worfdogSec, "initial_delay", 30, 0, math.MaxInt32)
+	cfg.Worfdog.Interval = l.intKey(worfdogSec, "interval", 30, 1, math.MaxInt32)
+	cfg.Worfdog.DryRun = l.boolKey(worfdogSec, "dry_run", false)
 	cfg.Warnings = append(cfg.Warnings, validateSection(worfdogSec, "worfdog")...)
 
-	// Validate reboot section
 	rebootSec := f.Section("reboot")
-	cfg.Reboot.Enabled = rebootSec.Key("enabled").MustBool(false)
-	cfg.Reboot.MaxRestarts = rebootSec.Key("max_restarts").MustInt(3)
-	cfg.Reboot.MaxReboots = rebootSec.Key("max_reboots").MustInt(3)
-	cfg.Reboot.WindowHours = rebootSec.Key("window_hours").MustInt(24)
+	cfg.Reboot.Enabled = l.boolKey(rebootSec, "enabled", false)
+	cfg.Reboot.MaxRestarts = l.intKey(rebootSec, "max_restarts", 3, 0, math.MaxInt32)
+	cfg.Reboot.MaxReboots = l.intKey(rebootSec, "max_reboots", 3, 0, math.MaxInt32)
+	cfg.Reboot.WindowHours = l.intKey(rebootSec, "window_hours", 24, 1, math.MaxInt32)
 	cfg.Reboot.SudoPassword = rebootSec.Key("sudo_password").String()
 	cfg.Warnings = append(cfg.Warnings, validateSection(rebootSec, "reboot")...)
 
-	// Parse and validate services
+	// Sections without a type key are not services
 	for _, section := range f.Sections() {
-		// Skip sections without a type field (not services)
 		if section.Key("type").String() == "" {
 			continue
 		}
@@ -123,27 +162,49 @@ func Load(path string) (*Config, error) {
 			Unit:               section.Key("unit").String(),
 			URL:                section.Key("url").String(),
 			Host:               section.Key("host").String(),
-			Port:               section.Key("port").MustInt(3306),
+			Port:               l.intKey(section, "port", 3306, 1, 65535),
 			Username:           section.Key("username").String(),
 			Password:           section.Key("password").String(),
 			Database:           section.Key("database").String(),
-			Timeout:            section.Key("timeout").MustInt(10),
+			Timeout:            l.intKey(section, "timeout", 10, 1, math.MaxInt32),
 			RestartCmd:         section.Key("restart_cmd").String(),
-			MaxRestarts:        section.Key("max_restarts").MustInt(0),
-			InsecureSkipVerify: section.Key("insecure_skip_verify").MustBool(false),
+			MaxRestarts:        l.intKey(section, "max_restarts", 0, 0, math.MaxInt32),
+			InsecureSkipVerify: l.boolKey(section, "insecure_skip_verify", false),
 			TLSHostnames:       section.Key("tls_hostnames").String(),
-			MaxRetries:         section.Key("max_retries").MustInt(0),
+			MaxRetries:         l.intKey(section, "max_retries", 1, 0, math.MaxInt32),
+		}
+		// 0 has always meant "use the default"
+		if svc.MaxRetries == 0 {
+			svc.MaxRetries = 1
 		}
 
-		// Validate service section
 		cfg.Warnings = append(cfg.Warnings, validateSection(section, "service")...)
 
-		// Set defaults based on type
-		if svc.Type == "systemd" && svc.Unit == "" {
-			svc.Unit = svc.Name
+		switch svc.Type {
+		case "systemd":
+			if svc.Unit == "" {
+				svc.Unit = svc.Name
+			}
+		case "https", "http":
+			if svc.URL == "" {
+				l.fail(svc.Name, "url", "required for type %q", svc.Type)
+			}
+		case "mysql":
+			if svc.Host == "" {
+				l.fail(svc.Name, "host", "required for type mysql")
+			}
+			if svc.Username == "" {
+				l.fail(svc.Name, "username", "required for type mysql")
+			}
+		default:
+			l.fail(svc.Name, "type", "unknown type %q (expected systemd, https, http or mysql)", svc.Type)
 		}
 
 		cfg.Services = append(cfg.Services, svc)
+	}
+
+	if len(l.errs) > 0 {
+		return nil, fmt.Errorf("invalid configuration:\n%w", errors.Join(l.errs...))
 	}
 
 	return cfg, nil

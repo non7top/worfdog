@@ -18,6 +18,7 @@ type Tracker struct {
 	windowHours int
 	rebootFile  string
 	reboots     []time.Time
+	stateErr    error // set when the state file exists but cannot be read; blocks reboots
 	sudoPass    string
 }
 
@@ -36,7 +37,7 @@ func NewTracker(maxReboots, windowHours int, sudoPass, stateFile string) *Tracke
 	}
 
 	// Load existing state
-	_ = t.load()
+	t.stateErr = t.load()
 
 	return t
 }
@@ -47,6 +48,10 @@ func (t *Tracker) CanReboot() (bool, string) {
 	defer t.mu.Unlock()
 
 	t.cleanOldReboots()
+
+	if t.stateErr != nil {
+		return false, fmt.Sprintf("reboot state %s is unreadable (%v); fix it or run -reset-reboots", t.rebootFile, t.stateErr)
+	}
 
 	if len(t.reboots) >= t.maxReboots {
 		return false, fmt.Sprintf("Maximum reboots (%d) reached within %d hours", t.maxReboots, t.windowHours)
@@ -132,7 +137,12 @@ func (t *Tracker) save() error {
 		return err
 	}
 
-	return os.WriteFile(t.rebootFile, data, 0o644)
+	// Rename is atomic, so a crash never leaves a truncated state file.
+	tmp := t.rebootFile + ".tmp"
+	if err := os.WriteFile(tmp, data, 0o644); err != nil {
+		return err
+	}
+	return os.Rename(tmp, t.rebootFile)
 }
 
 // load restores the reboot state from disk
@@ -154,7 +164,11 @@ func (t *Tracker) Reset() error {
 	defer t.mu.Unlock()
 
 	t.reboots = []time.Time{}
-	return t.save()
+	if err := t.save(); err != nil {
+		return err
+	}
+	t.stateErr = nil
+	return nil
 }
 
 // Status returns a human-readable status of the reboot tracker
@@ -164,6 +178,10 @@ func (t *Tracker) Status() string {
 
 	t.cleanOldReboots()
 
-	return fmt.Sprintf("Reboots in last %d hours: %d/%d",
+	status := fmt.Sprintf("Reboots in last %d hours: %d/%d",
 		t.windowHours, len(t.reboots), t.maxReboots)
+	if t.stateErr != nil {
+		status += fmt.Sprintf(" (state unreadable: %v; reboots blocked)", t.stateErr)
+	}
+	return status
 }

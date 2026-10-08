@@ -13,7 +13,7 @@ import (
 
 // HTTPSPlugin monitors HTTPS endpoints
 type HTTPSPlugin struct {
-	cfg    config.ServiceConfig
+	base
 	client *http.Client
 }
 
@@ -30,7 +30,7 @@ func NewHTTPSPlugin(cfg config.ServiceConfig) *HTTPSPlugin {
 	}
 
 	return &HTTPSPlugin{
-		cfg: cfg,
+		base: base{cfg: cfg},
 		client: &http.Client{
 			Timeout: time.Duration(cfg.Timeout) * time.Second,
 			Transport: &http.Transport{
@@ -73,14 +73,6 @@ func verifyAgainstHostnames(hostnames []string, roots *x509.CertPool) func(tls.C
 	}
 }
 
-func (p *HTTPSPlugin) Name() string {
-	return p.cfg.Name
-}
-
-func (p *HTTPSPlugin) GetConfig() config.ServiceConfig {
-	return p.cfg
-}
-
 func (p *HTTPSPlugin) Check() CheckResult {
 	if p.cfg.URL == "" {
 		return CheckResult{
@@ -113,11 +105,4 @@ func (p *HTTPSPlugin) Check() CheckResult {
 		Message: fmt.Sprintf("HTTP %d", resp.StatusCode),
 		Service: p.cfg.Name,
 	}
-}
-
-func (p *HTTPSPlugin) Restart() error {
-	if p.cfg.RestartCmd != "" {
-		return executeCommand(p.cfg.RestartCmd, restartTimeout)
-	}
-	return fmt.Errorf("no restart command configured for %s", p.cfg.Name)
 }
