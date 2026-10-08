@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.1](https://github.com/non7top/worfdog/compare/v0.4.0...v0.4.1) (2026-10-08)
+
+
+### Bug Fixes
+
+* pass sudo password via stdin, honor state file dir, skip delay for -status ([50b7843](https://github.com/non7top/worfdog/commit/50b7843d0710c4406d4cd10c2c3e508c403e623f))
+* sudo password handling, state dir, -status delay; update versions ([53537a4](https://github.com/non7top/worfdog/commit/53537a438e83b2322ff13d91c4aad68b785bd5be))
+
 ## [Unreleased]
 
 ### Fixed
