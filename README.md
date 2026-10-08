@@ -100,6 +100,7 @@ enabled = true
 max_restarts = 3
 max_reboots = 3
 window_hours = 24
+# Not needed when running as root (the shipped unit does); NoNewPrivileges=true there blocks sudo
 # sudo_password = your_sudo_password_here
 
 [nginx]
@@ -149,7 +150,7 @@ restart_cmd = systemctl restart api-service
 | `max_restarts` | int | 3 | Maximum service restart attempts before considering reboot |
 | `max_reboots` | int | 3 | Maximum number of reboots allowed within the time window |
 | `window_hours` | int | 24 | Time window (in hours) for counting reboots |
-| `sudo_password` | string | - | Optional sudo password for reboot command |
+| `sudo_password` | string | - | Only for running as a non-root user; not needed as root and blocked by the shipped unit's `NoNewPrivileges=true` |
 
 #### Service Sections
 

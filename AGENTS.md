@@ -288,7 +288,7 @@ See [CHANGELOG.md](CHANGELOG.md) for full history.
 
 ## Security Considerations
 
-1. **Sudo Password** - Store in config file (restrict permissions: `chmod 600`)
+1. **Sudo Password** - Only needed when not running as root. The shipped unit runs as root with `NoNewPrivileges=true`, which blocks sudo. If used, restrict the config file (`chmod 600`)
 2. **TLS Verification** - Use `tls_hostnames` instead of `insecure_skip_verify`
 3. **Reboot Limits** - Prevents reboot loops (default: 3 per 24h)
 4. **Dry Run Mode** - Test configuration safely before production
