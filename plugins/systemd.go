@@ -1,9 +1,11 @@
 package plugins
 
 import (
+	"context"
 	"fmt"
 	"os/exec"
 	"strings"
+	"time"
 
 	"worfdog/config"
 )
@@ -28,6 +30,13 @@ func (p *SystemdPlugin) GetConfig() config.ServiceConfig {
 	return p.cfg
 }
 
+func (p *SystemdPlugin) checkTimeout() time.Duration {
+	if p.cfg.Timeout > 0 {
+		return time.Duration(p.cfg.Timeout) * time.Second
+	}
+	return 10 * time.Second
+}
+
 func (p *SystemdPlugin) Check() CheckResult {
 	if p.cfg.Unit == "" {
 		return CheckResult{
@@ -38,8 +47,9 @@ func (p *SystemdPlugin) Check() CheckResult {
 	}
 
 	// Check service status using systemctl is-active
-	cmd := exec.Command("systemctl", "is-active", p.cfg.Unit)
-	output, err := cmd.CombinedOutput()
+	ctx, cancel := context.WithTimeout(context.Background(), p.checkTimeout())
+	defer cancel()
+	output, err := exec.CommandContext(ctx, "systemctl", "is-active", p.cfg.Unit).CombinedOutput()
 	if err != nil {
 		status := strings.TrimSpace(string(output))
 		if status == "" {
@@ -70,12 +80,13 @@ func (p *SystemdPlugin) Check() CheckResult {
 
 func (p *SystemdPlugin) Restart() error {
 	if p.cfg.RestartCmd != "" {
-		return executeCommand(p.cfg.RestartCmd)
+		return executeCommand(p.cfg.RestartCmd, restartTimeout)
 	}
 
 	// Default: use systemctl restart
-	cmd := exec.Command("systemctl", "restart", p.cfg.Unit)
-	if err := cmd.Run(); err != nil {
+	ctx, cancel := context.WithTimeout(context.Background(), restartTimeout)
+	defer cancel()
+	if err := exec.CommandContext(ctx, "systemctl", "restart", p.cfg.Unit).Run(); err != nil {
 		return fmt.Errorf("failed to restart %s: %w", p.cfg.Unit, err)
 	}
 	return nil

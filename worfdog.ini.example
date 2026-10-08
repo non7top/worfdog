@@ -13,6 +13,7 @@ enabled = true
 max_restarts = 3
 max_reboots = 3
 window_hours = 24
+# Not needed when running as root (the shipped unit does); NoNewPrivileges=true there blocks sudo
 # sudo_password = your_sudo_password_here
 
 [nginx]

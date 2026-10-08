@@ -3,9 +3,11 @@ package plugins
 import (
 	"database/sql"
 	"fmt"
+	"net"
+	"strconv"
 	"time"
 
-	_ "github.com/go-sql-driver/mysql"
+	"github.com/go-sql-driver/mysql"
 	"worfdog/config"
 )
 
@@ -19,6 +21,18 @@ func NewMySQLPlugin(cfg config.ServiceConfig) *MySQLPlugin {
 	return &MySQLPlugin{
 		cfg: cfg,
 	}
+}
+
+// mysqlDSN builds the DSN through mysql.Config so credentials with special characters are escaped.
+func mysqlDSN(cfg config.ServiceConfig) string {
+	c := mysql.NewConfig()
+	c.User = cfg.Username
+	c.Passwd = cfg.Password
+	c.Net = "tcp"
+	c.Addr = net.JoinHostPort(cfg.Host, strconv.Itoa(cfg.Port))
+	c.DBName = cfg.Database
+	c.Timeout = time.Duration(cfg.Timeout) * time.Second
+	return c.FormatDSN()
 }
 
 func (p *MySQLPlugin) Name() string {
@@ -46,18 +60,8 @@ func (p *MySQLPlugin) Check() CheckResult {
 		}
 	}
 
-	// Build DSN (Data Source Name)
-	dsn := fmt.Sprintf("%s:%s@tcp(%s:%d)/%s?timeout=%ds",
-		p.cfg.Username,
-		p.cfg.Password,
-		p.cfg.Host,
-		p.cfg.Port,
-		p.cfg.Database,
-		p.cfg.Timeout,
-	)
-
 	// Open connection
-	db, err := sql.Open("mysql", dsn)
+	db, err := sql.Open("mysql", mysqlDSN(p.cfg))
 	if err != nil {
 		return CheckResult{
 			Status:  StatusCritical,
@@ -88,7 +92,7 @@ func (p *MySQLPlugin) Check() CheckResult {
 
 func (p *MySQLPlugin) Restart() error {
 	if p.cfg.RestartCmd != "" {
-		return executeCommand(p.cfg.RestartCmd)
+		return executeCommand(p.cfg.RestartCmd, restartTimeout)
 	}
 	return fmt.Errorf("no restart command configured for %s", p.cfg.Name)
 }
