@@ -309,15 +309,9 @@ func main() {
 	// Create watchdog
 	watchdog := NewWatchdog(cfg, intervalValue, dryRunValue)
 
-	// Handle initial delay
-	if initialDelayValue > 0 {
-		watchdog.logger.Printf("Waiting %v before first check...", initialDelayValue)
-		time.Sleep(initialDelayValue)
-	}
-
 	// Handle status request
 	if *showStatus {
-		fmt.Println("Warfdog Status")
+		fmt.Println("Worfdog Status")
 		fmt.Println("==============")
 		fmt.Printf("Plugins: %d\n", len(watchdog.plugins))
 		fmt.Println(watchdog.rebootTracker.Status())
@@ -332,6 +326,12 @@ func main() {
 		}
 		fmt.Println("Reboot counter reset successfully")
 		os.Exit(0)
+	}
+
+	// Handle initial delay
+	if initialDelayValue > 0 {
+		watchdog.logger.Printf("Waiting %v before first check...", initialDelayValue)
+		time.Sleep(initialDelayValue)
 	}
 
 	// Setup signal handling for graceful shutdown

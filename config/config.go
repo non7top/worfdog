@@ -201,7 +201,7 @@ func (c *Config) WarningString() string {
 	var sb strings.Builder
 	sb.WriteString("\nConfiguration warnings:\n")
 	for _, msg := range c.GetWarnings() {
-		sb.WriteString(fmt.Sprintf("  WARNING: %s\n", msg))
+		fmt.Fprintf(&sb, "  WARNING: %s\n", msg)
 	}
 	return sb.String()
 }

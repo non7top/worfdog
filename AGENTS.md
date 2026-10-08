@@ -6,7 +6,7 @@
 
 **Repository:** https://github.com/non7top/worfdog
 
-**Latest Release:** v0.3.7
+**Latest Release:** v0.4.0
 
 ## Quick Start
 

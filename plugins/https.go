@@ -87,7 +87,7 @@ func (p *HTTPSPlugin) Check() CheckResult {
 			Service: p.cfg.Name,
 		}
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode >= 200 && resp.StatusCode < 400 {
 		return CheckResult{

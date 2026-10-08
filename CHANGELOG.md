@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- Reboot with `sudo_password` no longer builds a shell command (breaks on `'`, exposed password in process list)
+- Reboot state directory is created from the state file path instead of a hardcoded one
+- `-status` and `-reset-reboots` exit immediately instead of waiting for the initial delay
+- `-status` header typo ("Warfdog")
+
 ### Changed
 - DEB package is now architecture-independent (`all` instead of `amd64`)
 - Single DEB package works on all Debian/Ubuntu systems

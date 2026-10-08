@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"path/filepath"
+	"strings"
 	"sync"
 	"time"
 )
@@ -34,7 +36,7 @@ func NewTracker(maxReboots, windowHours int, sudoPass, stateFile string) *Tracke
 	}
 
 	// Load existing state
-	t.load()
+	_ = t.load()
 
 	return t
 }
@@ -87,7 +89,8 @@ func (t *Tracker) Reboot() error {
 	var cmd *exec.Cmd
 	if t.sudoPass != "" {
 		// Use sudo with password
-		cmd = exec.Command("sh", "-c", "echo '"+t.sudoPass+"' | sudo -S reboot")
+		cmd = exec.Command("sudo", "-S", "reboot")
+		cmd.Stdin = strings.NewReader(t.sudoPass + "\n")
 	} else {
 		// Try reboot directly (may require sudo privileges)
 		cmd = exec.Command("reboot")
@@ -120,8 +123,7 @@ func (t *Tracker) cleanOldReboots() {
 // save persists the reboot state to disk
 func (t *Tracker) save() error {
 	// Ensure directory exists
-	dir := "/var/lib/worfdog"
-	if err := os.MkdirAll(dir, 0o755); err != nil {
+	if err := os.MkdirAll(filepath.Dir(t.rebootFile), 0o755); err != nil {
 		return err
 	}
 
