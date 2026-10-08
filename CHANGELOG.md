@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.2](https://github.com/non7top/worfdog/compare/v0.4.1...v0.4.2) (2026-10-08)
+
+
+### Bug Fixes
+
+* build the MySQL DSN with mysql.Config ([81030de](https://github.com/non7top/worfdog/commit/81030de1208c526f69b7d5e536e8ef90b364fde8))
+* keep restarting a service when a reboot is blocked ([f3e714a](https://github.com/non7top/worfdog/commit/f3e714afe711a82868a439e47e90e0350968e78e))
+* let systemd create the state directory ([4dd7a09](https://github.com/non7top/worfdog/commit/4dd7a09eaf9ed9e4186f9c88691a5956b14bc186))
+* time out hung checks and restart commands, run checks concurrently ([48a11df](https://github.com/non7top/worfdog/commit/48a11df496ceff3cd20ac4fb6d7c2edb7f85a3b1))
+* verify the certificate chain when tls_hostnames is set ([44c7e79](https://github.com/non7top/worfdog/commit/44c7e79a579613c9ce517ff959f711b76ad9309c))
+
 ## [0.4.1](https://github.com/non7top/worfdog/compare/v0.4.0...v0.4.1) (2026-10-08)
 
 
