@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 	"os/signal"
+	"sync"
 	"syscall"
 	"time"
 
@@ -104,10 +105,21 @@ func (w *Watchdog) Run() {
 	}
 }
 
-// checkAll runs health checks on all plugins
+// checkAll runs health checks on all plugins concurrently, then handles the results in order
 func (w *Watchdog) checkAll() {
-	for _, p := range w.plugins {
-		result := p.Check()
+	results := make([]plugins.CheckResult, len(w.plugins))
+
+	var wg sync.WaitGroup
+	for i, p := range w.plugins {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			results[i] = p.Check()
+		}()
+	}
+	wg.Wait()
+
+	for _, result := range results {
 		w.handleResult(result)
 	}
 }

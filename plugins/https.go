@@ -117,7 +117,7 @@ func (p *HTTPSPlugin) Check() CheckResult {
 
 func (p *HTTPSPlugin) Restart() error {
 	if p.cfg.RestartCmd != "" {
-		return executeCommand(p.cfg.RestartCmd)
+		return executeCommand(p.cfg.RestartCmd, restartTimeout)
 	}
 	return fmt.Errorf("no restart command configured for %s", p.cfg.Name)
 }

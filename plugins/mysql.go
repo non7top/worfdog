@@ -92,7 +92,7 @@ func (p *MySQLPlugin) Check() CheckResult {
 
 func (p *MySQLPlugin) Restart() error {
 	if p.cfg.RestartCmd != "" {
-		return executeCommand(p.cfg.RestartCmd)
+		return executeCommand(p.cfg.RestartCmd, restartTimeout)
 	}
 	return fmt.Errorf("no restart command configured for %s", p.cfg.Name)
 }
