@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.3](https://github.com/non7top/worfdog/compare/v0.4.2...v0.4.3) (2026-10-08)
+
+
+### Bug Fixes
+
+* validate configuration at load instead of silently using defaults ([0dcf1ba](https://github.com/non7top/worfdog/commit/0dcf1ba85101795f8e098d3b5d3195205a050c0a))
+* write reboot state atomically and block reboots on a corrupt state file ([f9af0fd](https://github.com/non7top/worfdog/commit/f9af0fd452d23ee959a4f3884b3bd1f3af11c57b))
+
 ## [0.4.2](https://github.com/non7top/worfdog/compare/v0.4.1...v0.4.2) (2026-10-08)
 
 
