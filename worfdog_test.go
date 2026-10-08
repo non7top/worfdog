@@ -210,7 +210,7 @@ func TestNewWatchdog(t *testing.T) {
 	if !watchdog.dryRun {
 		t.Error("Expected dryRun to be true")
 	}
-	if len(watchdog.plugins) != 1 {
-		t.Errorf("Expected 1 plugin, got %d", len(watchdog.plugins))
+	if len(watchdog.services) != 1 {
+		t.Errorf("Expected 1 plugin, got %d", len(watchdog.services))
 	}
 }

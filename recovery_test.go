@@ -34,18 +34,17 @@ func (p *fakePlugin) GetConfig() config.ServiceConfig {
 func TestRecoveryKeepsRestartingWhenRebootBlocked(t *testing.T) {
 	p := &fakePlugin{}
 	cfg := &config.Config{Reboot: config.RebootConfig{Enabled: true, MaxRestarts: 1}}
+	svc := &service{plugin: p, cfg: p.GetConfig()}
 	w := &Watchdog{
-		cfg:           cfg,
-		plugins:       []plugins.Plugin{p},
-		restartCounts: map[string]int{},
-		failureCounts: map[string]int{},
+		cfg:      cfg,
+		services: []*service{svc},
 		// maxReboots=0 means every reboot is blocked
 		rebootTracker: reboot.NewTracker(0, 24, "", filepath.Join(t.TempDir(), "state.json")),
 		logger:        log.New(io.Discard, "", 0),
 	}
 
 	for range 4 {
-		w.attemptRecovery("svc")
+		w.attemptRecovery(svc)
 	}
 
 	if p.restarts != 4 {
