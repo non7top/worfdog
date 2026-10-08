@@ -56,3 +56,38 @@ func TestInsecureSkipVerifyStillAllowsUntrusted(t *testing.T) {
 		t.Fatalf("expected OK with insecure_skip_verify, got %v: %s", got.Status, got.Message)
 	}
 }
+
+func TestHTTPSStatusMapping(t *testing.T) {
+	tests := []struct {
+		code int
+		want PluginStatus
+	}{
+		{http.StatusOK, StatusOK},
+		{http.StatusFound, StatusOK},
+		{http.StatusInternalServerError, StatusCritical},
+		{http.StatusNotFound, StatusCritical},
+	}
+
+	for _, tt := range tests {
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+			w.WriteHeader(tt.code)
+		}))
+		t.Cleanup(srv.Close)
+
+		p := NewHTTPSPlugin(config.ServiceConfig{Name: "web", URL: srv.URL, Timeout: 5})
+		if got := p.Check(); got.Status != tt.want {
+			t.Errorf("HTTP %d: got %v, want %v", tt.code, got.Status, tt.want)
+		}
+	}
+}
+
+func TestHTTPSConnectionFailureIsCritical(t *testing.T) {
+	srv := httptest.NewServer(http.NotFoundHandler())
+	url := srv.URL
+	srv.Close()
+
+	p := NewHTTPSPlugin(config.ServiceConfig{Name: "web", URL: url, Timeout: 2})
+	if got := p.Check(); got.Status != StatusCritical {
+		t.Fatalf("expected CRITICAL for an unreachable server, got %v", got.Status)
+	}
+}
