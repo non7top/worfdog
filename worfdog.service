@@ -15,7 +15,7 @@ StandardError=journal
 NoNewPrivileges=true
 ProtectSystem=strict
 ProtectHome=true
-ReadWritePaths=/var/lib/worfdog
+StateDirectory=worfdog
 
 [Install]
 WantedBy=multi-user.target
