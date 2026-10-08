@@ -179,8 +179,10 @@ func (w *Watchdog) attemptRecovery(serviceName string) {
 	// Check if we've exceeded max restarts
 	if w.cfg.Reboot.Enabled && restartCount > maxRestarts {
 		w.logger.Printf("Service %s exceeded max restarts (%d), considering reboot", serviceName, maxRestarts)
-		w.attemptReboot(serviceName)
-		return
+		if w.attemptReboot(serviceName) {
+			return
+		}
+		w.logger.Printf("Reboot not possible, continuing to restart %s", serviceName)
 	}
 
 	// Get restart command for this service
@@ -229,25 +231,27 @@ func (w *Watchdog) attemptRecovery(serviceName string) {
 	}
 }
 
-// attemptReboot tries to reboot the system if allowed
-func (w *Watchdog) attemptReboot(serviceName string) {
+// attemptReboot tries to reboot the system if allowed and reports whether a reboot was initiated
+func (w *Watchdog) attemptReboot(serviceName string) bool {
 	w.logger.Printf("Considering system reboot due to persistent failure of %s", serviceName)
 
 	if allowed, reason := w.rebootTracker.CanReboot(); !allowed {
 		w.logger.Printf("Reboot blocked: %s", reason)
-		return
+		return false
 	}
 
 	if w.dryRun {
 		w.logger.Printf("[DRY RUN] Would reboot system")
-		return
+		return true
 	}
 
 	w.logger.Printf("Initiating system reboot...")
 	if err := w.rebootTracker.Reboot(); err != nil {
 		w.logger.Printf("Reboot failed: %v", err)
+		return false
 	}
 	// Note: On success, the system will reboot and this process will terminate
+	return true
 }
 
 // GetRebootTracker returns the reboot tracker for external access
