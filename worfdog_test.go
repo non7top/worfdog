@@ -36,7 +36,7 @@ func TestBuildBinary(t *testing.T) {
 	}
 
 	// Clean up
-	defer os.Remove(filepath.Join(projectRoot, "worfdog-test"))
+	defer func() { _ = os.Remove(filepath.Join(projectRoot, "worfdog-test")) }()
 
 	// Verify binary exists and is executable
 	info, err := os.Stat(filepath.Join(projectRoot, "worfdog-test"))
@@ -59,7 +59,7 @@ func TestVersionFlag(t *testing.T) {
 	if out, err := cmd.CombinedOutput(); err != nil {
 		t.Fatalf("failed to build: %v\n%s", err, string(out))
 	}
-	defer os.Remove(binary)
+	defer func() { _ = os.Remove(binary) }()
 
 	cmd = exec.Command(binary, "-version")
 	output, err := cmd.CombinedOutput()
@@ -83,7 +83,7 @@ func TestHelpFlag(t *testing.T) {
 	if out, err := cmd.CombinedOutput(); err != nil {
 		t.Fatalf("failed to build: %v\n%s", err, string(out))
 	}
-	defer os.Remove(binary)
+	defer func() { _ = os.Remove(binary) }()
 
 	cmd = exec.Command(binary, "-h")
 	output, err := cmd.CombinedOutput()
@@ -111,7 +111,7 @@ func TestDryRunFlag(t *testing.T) {
 	if out, err := cmd.CombinedOutput(); err != nil {
 		t.Fatalf("failed to build: %v\n%s", err, string(out))
 	}
-	defer os.Remove(binary)
+	defer func() { _ = os.Remove(binary) }()
 
 	// Create a minimal test config
 	tmpDir := t.TempDir()

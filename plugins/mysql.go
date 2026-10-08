@@ -65,7 +65,7 @@ func (p *MySQLPlugin) Check() CheckResult {
 			Service: p.cfg.Name,
 		}
 	}
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	// Set connection timeout
 	db.SetConnMaxLifetime(time.Duration(p.cfg.Timeout) * time.Second)
