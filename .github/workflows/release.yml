@@ -1,267 +1,83 @@
 name: Build and Release
 
 on:
-  push:
-    tags:
-      - 'v*'  # Semantic versioning with v prefix: v1.2.3
+  workflow_run:
+    workflows: ["release-please"]
+    types: [completed]
   workflow_dispatch:
     inputs:
-      version:
-        description: 'Version to release (e.g., 1.2.3)'
+      tag:
+        description: 'Existing release tag to (re)build and attach assets to, e.g. v0.4.1'
         required: true
         type: string
 
 permissions:
-  contents: write
-  packages: write
-
-env:
-  APP_NAME: worfdog
-  GO_VERSION: '1.25'
+  contents: read
 
 jobs:
-  build:
-    name: Build Static Binary
+  # release-please tags with GITHUB_TOKEN, which doesn't trigger push:tags
+  # workflows, so run after it instead and look for a tag on its commit.
+  find-tag:
+    name: Find release tag
+    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.find_tag.outputs.tag }}
 
     steps:
-      - name: Checkout code
+      - name: Checkout
         uses: actions/checkout@v6
         with:
+          ref: ${{ github.event_name == 'workflow_dispatch' && github.ref || github.event.workflow_run.head_sha }}
           fetch-depth: 0
+          fetch-tags: true
 
-      - name: Set up Go
-        uses: actions/setup-go@v6
-        with:
-          go-version: ${{ env.GO_VERSION }}
-          cache: true
-
-      - name: Get version
-        id: get_version
+      - name: Find a release tag on this commit
+        id: find_tag
+        env:
+          INPUT_TAG: ${{ inputs.tag }}
         run: |
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            VERSION="v${{ github.event.inputs.version }}"
+            TAG="${INPUT_TAG}"
           else
-            VERSION=${GITHUB_REF#refs/tags/}
+            TAG=$(git tag --points-at HEAD | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | head -1 || true)
           fi
-          echo "version=${VERSION}" >> $GITHUB_OUTPUT
-          echo "tag=${VERSION}" >> $GITHUB_OUTPUT
+          echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
 
-      - name: Build static binary
-        run: |
-          CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build \
-            -ldflags="-s -w -X main.Version=${{ steps.get_version.outputs.version }}" \
-            -buildvcs=false \
-            -trimpath \
-            -o ${{ env.APP_NAME }} \
-            .
+  build:
+    name: Build
+    needs: find-tag
+    if: needs.find-tag.outputs.tag != ''
+    uses: ./.github/workflows/build-artifacts.yml
+    with:
+      version: ${{ needs.find-tag.outputs.tag }}
+      ref: refs/tags/${{ needs.find-tag.outputs.tag }}
 
-      - name: Verify static binary
-        run: |
-          file ${{ env.APP_NAME }}
-          ldd ${{ env.APP_NAME }} || echo "Binary is statically linked"
-
-      - name: Upload binary artifact
-        uses: actions/upload-artifact@v7
-        with:
-          name: worfdog-linux-amd64
-          path: worfdog
-          retention-days: 30
-
-  build-deb:
-    name: Build DEB Package
+  publish:
+    name: Publish release assets
+    needs: [find-tag, build]
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        ubuntu:
-          - version: '24.04'
-            codename: noble
-          - version: '22.04'
-            codename: jammy
+    permissions:
+      contents: write
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v6
-        with:
-          fetch-depth: 0
-
-      - name: Set up Go
-        uses: actions/setup-go@v6
-        with:
-          go-version: ${{ env.GO_VERSION }}
-          cache: true
-
-      - name: Get version
-        id: get_version
-        run: |
-          VERSION=${GITHUB_REF#refs/tags/}
-          # Remove 'v' prefix for deb version
-          VERSION=${VERSION#v}
-          echo "version=${VERSION:-0.0.0}" >> $GITHUB_OUTPUT
-
-      - name: Build static binary
-        run: |
-          CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build \
-            -ldflags="-s -w -X main.Version=${{ steps.get_version.outputs.version }}" \
-            -buildvcs=false \
-            -trimpath \
-            -o worfdog \
-            .
-
-      - name: Create DEB package structure
-        run: |
-          VERSION=${{ steps.get_version.outputs.version }}
-          CODENAME=${{ matrix.ubuntu.codename }}
-
-          # Create package directory structure
-          mkdir -p deb-package/DEBIAN
-          mkdir -p deb-package/usr/bin
-          mkdir -p deb-package/etc/worfdog
-          mkdir -p deb-package/lib/systemd/system
-          mkdir -p deb-package/var/lib/worfdog
-
-          # Copy binary
-          cp worfdog deb-package/usr/bin/
-          chmod 755 deb-package/usr/bin/worfdog
-
-          # Copy config example
-          cp worfdog.ini.example deb-package/etc/worfdog/worfdog.ini.example
-
-          # Copy systemd unit
-          cp worfdog.service deb-package/lib/systemd/system/
-
-          # Create DEBIAN/control
-          cat > deb-package/DEBIAN/control << EOF
-          Package: worfdog
-          Version: ${VERSION}
-          Section: utils
-          Priority: optional
-          Architecture: amd64
-          Maintainer: Warfdog Team
-          Description: Simple watchdog service for monitoring and auto-recovery
-           Warfdog is a watchdog service that monitors systemd services and
-           HTTPS endpoints, with automatic restart and system reboot capabilities.
-          Depends: systemd
-          EOF
-
-          # Create DEBIAN/postinst
-          cat > deb-package/DEBIAN/postinst << 'POSTINST'
-          #!/bin/bash
-          set -e
-
-          # Reload systemd to pick up new unit file
-          systemctl daemon-reload || true
-
-          # Enable but don't start the service
-          systemctl enable worfdog.service || true
-
-          exit 0
-          POSTINST
-          chmod 755 deb-package/DEBIAN/postinst
-
-          # Create DEBIAN/postrm
-          cat > deb-package/DEBIAN/postrm << 'POSTRM'
-          #!/bin/bash
-          set -e
-
-          if [ "$1" = "remove" ] || [ "$1" = "purge" ]; then
-            systemctl daemon-reload || true
-          fi
-
-          exit 0
-          POSTRM
-          chmod 755 deb-package/DEBIAN/postrm
-
-      - name: Build DEB package
-        run: |
-          VERSION=${{ steps.get_version.outputs.version }}
-          CODENAME=${{ matrix.ubuntu.codename }}
-          ARCH=amd64
-
-          # Build the package
-          dpkg-deb --build --root-owner-group deb-package worfdog_${VERSION}_${CODENAME}_${ARCH}.deb
-
-          # Verify the package
-          dpkg-deb --info worfdog_${VERSION}_${CODENAME}_${ARCH}.deb
-          dpkg-deb --field worfdog_${VERSION}_${CODENAME}_${ARCH}.deb
-
-      - name: Upload DEB artifact
-        uses: actions/upload-artifact@v7
-        with:
-          name: worfdog-${{ matrix.ubuntu.codename }}-amd64
-          path: worfdog_*.deb
-          retention-days: 30
-
-  release:
-    name: Create Release
-    needs: [build, build-deb]
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v6
-        with:
-          fetch-depth: 0
-
-      - name: Download all artifacts
+      - name: Download binary artifact
         uses: actions/download-artifact@v8
         with:
-          path: artifacts
+          name: worfdog-${{ needs.find-tag.outputs.tag }}
+          path: ./artifacts
 
-      - name: Get version
-        id: get_version
-        run: |
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            VERSION="v${{ github.event.inputs.version }}"
-          else
-            VERSION=${GITHUB_REF#refs/tags/}
-          fi
-          echo "version=${VERSION}" >> $GITHUB_OUTPUT
-          echo "tag=${VERSION}" >> $GITHUB_OUTPUT
-          echo "tag=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
-
-      - name: Prepare release assets
-        run: |
-          cd artifacts
-
-          # Rename binary
-          mv worfdog-linux-amd64/worfdog worfdog-linux-amd64-binary
-          chmod +x worfdog-linux-amd64-binary
-
-          # List all artifacts
-          ls -la */
-
-      - name: Create Release
-        uses: softprops/action-gh-release@v3
+      - name: Download DEB artifact
+        uses: actions/download-artifact@v8
         with:
-          name: Release ${{ steps.get_version.outputs.tag }}
-          body: |
-            ## Warfdog ${{ steps.get_version.outputs.tag }}
+          name: worfdog-deb-${{ needs.find-tag.outputs.tag }}
+          path: ./artifacts
 
-            ### Changes
-            - Static binary for Linux amd64
-            - DEB packages for Ubuntu 22.04 (Jammy) and 24.04 (Noble)
-            - Systemd unit file included
-
-            ### Installation
-
-            #### Using DEB package
-            ```bash
-            sudo dpkg -i worfdog_<version>_<codename>_amd64.deb
-            sudo systemctl enable worfdog
-            ```
-
-            #### Using binary directly
-            ```bash
-            sudo cp worfdog-linux-amd64-binary /usr/local/bin/worfdog
-            sudo chmod +x /usr/local/bin/worfdog
-            ```
-
-            ### Configuration
-            Create `/etc/worfdog/worfdog.ini` based on the example configuration.
-          draft: false
-          prerelease: ${{ contains(steps.get_version.outputs.tag, 'rc') || contains(steps.get_version.outputs.tag, 'alpha') || contains(steps.get_version.outputs.tag, 'beta') }}
+      # release-please already created the release and notes; this only attaches files.
+      - name: Attach assets to the release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ needs.find-tag.outputs.tag }}
           files: |
-            artifacts/worfdog-linux-amd64-binary
-            artifacts/worfdog-*/worfdog_*.deb
-          generate_release_notes: true
+            ./artifacts/worfdog
+            ./artifacts/worfdog_*.deb

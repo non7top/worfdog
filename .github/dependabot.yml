@@ -1,19 +1,39 @@
 version: 2
 updates:
-  # 1. Update Go dependencies (go.mod / go.sum)
+  # "chore" keeps bumps valid as conventional commits without cutting a
+  # release for each one; a human decides when a bump deserves a release.
+  # Update Go dependencies (go.mod / go.sum)
   - package-ecosystem: "gomod"
     directory: "/"
     schedule:
       interval: "weekly"
+    commit-message:
+      prefix: "chore"
+    groups:
+      go-modules:
+        patterns:
+          - "*"
 
-  # 2. Update GitHub Actions workflows
+  # Update GitHub Actions workflows
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
       interval: "weekly"
+    commit-message:
+      prefix: "chore"
+    groups:
+      github-actions:
+        patterns:
+          - "*"
 
-  # 3. Update pre-commit hooks (.pre-commit-config.yaml)
+  # Update pre-commit hooks (.pre-commit-config.yaml)
   - package-ecosystem: "pre-commit"
     directory: "/"
     schedule:
       interval: "weekly"
+    commit-message:
+      prefix: "chore"
+    groups:
+      pre-commit:
+        patterns:
+          - "*"

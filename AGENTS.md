@@ -38,7 +38,7 @@ worfdog/
 │   └── tracker.go               # Reboot tracking with limits
 ├── .github/workflows/
 │   ├── release.yml              # Build & release workflow
-│   └── tag-on-pr-merge.yml      # Auto-tag on PR merge
+│   └── release-please.yml       # Release PR and tagging
 ├── worfdog.ini.example          # Example configuration
 ├── worfdog.service              # Systemd unit file
 ├── README.md                    # User documentation
@@ -144,54 +144,21 @@ The config loader validates keys using struct tags. Unknown keys trigger warning
 
 ## CI/CD Workflows
 
-### tag-on-pr-merge.yml
+### release-please.yml / release-please-preview.yml
 
-**Trigger:** PR closed (merged)
+Thin callers of the shared workflows in `non7top/gh-workflows`. On every push to `master`, release-please maintains a release PR (version bump and `CHANGELOG.md` from conventional commits); merging it creates the `vX.Y.Z` tag and GitHub release. The preview workflow forecasts the bump on each PR. Config: `release-please-config.json`, `.release-please-manifest.json`.
 
-**Requirements:**
-- PR body must contain: `Tags vX.Y.Z` (case insensitive)
-- Tag must match SemVer regex with `v` prefix
-
-**Actions:**
-- Creates git tag if `Tags vX.Y.Z` found in PR body
-- Comments on PR with success/failure message
-- Validates tag format using regex
-
-**Example PR Body:**
-```markdown
-Tags v0.3.8
-
-## Summary
-Fix bug in HTTPS plugin.
-```
+Commit/PR title types decide the bump: `fix` = patch, `feat` = minor, `!`/`BREAKING CHANGE` = major. Dependabot uses `chore`, so bumps don't cut releases by themselves.
 
 ### release.yml
 
-**Trigger:**
-- Push to tags matching `v*`
-- Manual workflow_dispatch
+**Trigger:** `release-please` workflow completed, or manual `workflow_dispatch` with an existing tag.
 
-**Jobs:**
-1. **Build Static Binary** - Linux amd64, CGO_ENABLED=0
-2. **Build DEB Package** - Ubuntu 22.04 (jammy) & 24.04 (noble)
-3. **Create Release** - Upload assets to GitHub Releases
+Finds the release tag on the triggering commit, builds via `build-artifacts.yml` (static binary and one architecture-independent DEB) and attaches them to the release release-please already created. Tags created with `GITHUB_TOKEN` don't trigger `push: tags` workflows, which is why this runs after `release-please` instead.
 
 **Release Assets:**
-- `worfdog-linux-amd64-binary` - Static binary
-- `worfdog_<version>_jammy_amd64.deb` - Ubuntu 22.04
-- `worfdog_<version>_noble_amd64.deb` - Ubuntu 24.04
-
-### Known Limitation
-
-GitHub Actions doesn't trigger workflows on tags created by other actions (security feature).
-
-**Workaround:** After PR merge creates tag:
-```bash
-git push origin --delete tag vX.Y.Z
-git push origin vX.Y.Z
-```
-
-Or use GitHub UI to manually trigger release workflow.
+- `worfdog` - Static binary
+- `worfdog_<version>_all.deb` - DEB package
 
 ## Testing
 
@@ -240,9 +207,9 @@ go build -buildvcs=false -o worfdog .
 
 ### Creating a Release
 
-1. Create PR with `Tags vX.Y.Z` in body (see workflow below)
-2. Wait for PR review and merge
-3. Release is created automatically by combined workflow
+1. Merge PRs with conventional-commit titles (`feat:`, `fix:`, ...)
+2. Review and merge the release-please PR
+3. Tag, release notes and assets are created automatically
 
 ### Branch and PR Workflow
 
