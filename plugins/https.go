@@ -2,8 +2,8 @@ package plugins
 
 import (
 	"crypto/tls"
+	"crypto/x509"
 	"fmt"
-	"net"
 	"net/http"
 	"strings"
 	"time"
@@ -23,32 +23,10 @@ func NewHTTPSPlugin(cfg config.ServiceConfig) *HTTPSPlugin {
 		InsecureSkipVerify: cfg.InsecureSkipVerify,
 	}
 
-	// If custom hostnames are specified, use custom verification
-	if cfg.TLSHostnames != "" {
-		hostnames := strings.Split(cfg.TLSHostnames, ",")
-		for i, h := range hostnames {
-			hostnames[i] = strings.TrimSpace(h)
-		}
+	// Custom hostnames replace the name check only; the chain and expiry are still verified.
+	if cfg.TLSHostnames != "" && !cfg.InsecureSkipVerify {
 		tlsConfig.InsecureSkipVerify = true
-		tlsConfig.VerifyConnection = func(cs tls.ConnectionState) error {
-			// Check if any of the configured hostnames match the certificate
-			for _, certName := range cs.PeerCertificates[0].DNSNames {
-				for _, allowedName := range hostnames {
-					if certName == allowedName {
-						return nil
-					}
-				}
-			}
-			// Also check IP addresses
-			for _, certIP := range cs.PeerCertificates[0].IPAddresses {
-				for _, allowedName := range hostnames {
-					if ip := net.ParseIP(allowedName); ip != nil && ip.Equal(certIP) {
-						return nil
-					}
-				}
-			}
-			return fmt.Errorf("certificate not valid for any configured hostname")
-		}
+		tlsConfig.VerifyConnection = verifyAgainstHostnames(strings.Split(cfg.TLSHostnames, ","), nil)
 	}
 
 	return &HTTPSPlugin{
@@ -59,6 +37,39 @@ func NewHTTPSPlugin(cfg config.ServiceConfig) *HTTPSPlugin {
 				TLSClientConfig: tlsConfig,
 			},
 		},
+	}
+}
+
+// verifyAgainstHostnames verifies the peer chain against roots (system roots when nil)
+// and accepts the certificate if it is valid for any of the given names.
+func verifyAgainstHostnames(hostnames []string, roots *x509.CertPool) func(tls.ConnectionState) error {
+	names := make([]string, 0, len(hostnames))
+	for _, h := range hostnames {
+		if h = strings.TrimSpace(h); h != "" {
+			names = append(names, h)
+		}
+	}
+
+	return func(cs tls.ConnectionState) error {
+		if len(cs.PeerCertificates) == 0 {
+			return fmt.Errorf("no peer certificate")
+		}
+		leaf := cs.PeerCertificates[0]
+
+		opts := x509.VerifyOptions{Roots: roots, Intermediates: x509.NewCertPool()}
+		for _, c := range cs.PeerCertificates[1:] {
+			opts.Intermediates.AddCert(c)
+		}
+		if _, err := leaf.Verify(opts); err != nil {
+			return err
+		}
+
+		for _, name := range names {
+			if leaf.VerifyHostname(name) == nil {
+				return nil
+			}
+		}
+		return fmt.Errorf("certificate not valid for any configured hostname")
 	}
 }
 
