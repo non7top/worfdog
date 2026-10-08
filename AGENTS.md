@@ -121,7 +121,7 @@ The config loader validates keys using struct tags. Unknown keys trigger warning
 ```
 [worfdog] 2026/03/03 18:00:00 Version: 0.3.7
 [worfdog] 2026/03/03 18:00:00 Reboot config: enabled=true, max_restarts=3, max_reboots=3, window_hours=24
-[worfdog] 2026/03/03 18:00:00 Service [nginx]: type=systemd, timeout=10, max_restarts=0, max_retries=0
+[worfdog] 2026/03/03 18:00:00 Service [nginx]: type=systemd, timeout=10, max_restarts=0, max_retries=1
 [worfdog] 2026/03/03 18:00:00 Starting watchdog with 3 plugins, check interval: 30s
 [worfdog] 2026/03/03 18:00:00 Reboots in last 24 hours: 0/3
 [worfdog] 2026/03/03 18:00:00 [nginx] OK: Service active
